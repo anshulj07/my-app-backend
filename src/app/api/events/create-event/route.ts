@@ -2,21 +2,81 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { z } from "zod";
 
-const EventSchema = z.object({
-  title: z.string().min(1).max(120),
-  emoji: z.string().optional(),
-  lat: z.number().finite(),
-  lng: z.number().finite(),
-  address: z.string().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
-  time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
-});
-
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
   if (!expected) return null;
   const got = req.headers.get("x-api-key");
   return got === expected ? null : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+function normKey(s: string) {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s/g, "-");
+}
+
+/**
+ * If you want server-side enrichment later, you can plug reverse-geocoding here.
+ * For now, we enforce structured fields for reliable city/country filtering.
+ */
+
+const LocationSchema = z.object({
+  lat: z.number().finite(),
+  lng: z.number().finite(),
+
+  // display / identity (optional but recommended)
+  formattedAddress: z.string().max(300).optional().default(""),
+  placeId: z.string().max(200).optional(),
+
+  // structured fields (what you will filter on)
+  countryCode: z.string().min(2).max(2),          // e.g., "US"
+  countryName: z.string().max(80).optional().default(""),
+
+  admin1: z.string().max(120).optional().default(""),      // state/province name
+  admin1Code: z.string().max(10).optional().default(""),   // e.g., "NY"
+
+  city: z.string().min(1).max(120),
+  cityKey: z.string().max(140).optional(),                 // if not provided, derived from city
+  postalCode: z.string().max(20).optional().default(""),
+  neighborhood: z.string().max(120).optional().default(""),
+
+  source: z.enum(["user_typed", "places_autocomplete", "reverse_geocode"]).optional().default("user_typed"),
+});
+
+const EventCreateSchema = z.object({
+  title: z.string().min(1).max(120),
+  emoji: z.string().optional().default("📍"),
+
+  // Preferred (future-proof): ISO datetime
+  startsAt: z.string().datetime().optional(),
+
+  // Backward compatible (optional)
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
+  time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).default(""),
+
+  timezone: z.string().max(60).optional().default(""),
+
+  // NEW structured location object
+  location: LocationSchema,
+
+  // Optional metadata
+  tags: z.array(z.string().max(40)).optional().default([]),
+  visibility: z.enum(["public", "private"]).optional().default("public"),
+});
+
+function buildStartsAt(payload: z.infer<typeof EventCreateSchema>) {
+  if (payload.startsAt) return new Date(payload.startsAt);
+
+  // If date/time provided but no startsAt, store a best-effort UTC Date.
+  // (You can later improve with date-fns-tz/luxon using payload.timezone.)
+  if (payload.date && payload.time) {
+    const d = new Date(`${payload.date}T${payload.time}:00Z`);
+    return Number.isFinite(d.getTime()) ? d : null;
+  }
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -25,7 +85,8 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const parsed = EventSchema.safeParse(body);
+    const parsed = EventCreateSchema.safeParse(body);
+
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid payload", details: parsed.error.flatten() },
@@ -35,17 +96,58 @@ export async function POST(req: Request) {
 
     const payload = parsed.data;
 
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB || "myApp");
+    const cityKey = payload.location.cityKey?.trim()
+      ? payload.location.cityKey
+      : normKey(payload.location.city);
+
+    const startsAt = buildStartsAt(payload);
+
+    const now = new Date();
 
     const doc = {
-      ...payload,
+      title: payload.title,
       emoji: payload.emoji ?? "📍",
-      address: payload.address ?? "",
+      timezone: payload.timezone ?? "",
+
+      // Keep both: startsAt (preferred) + date/time (compat)
+      startsAt: startsAt, // can be null
       date: payload.date ?? "",
       time: payload.time ?? "",
-      createdAt: new Date(),
+
+      tags: payload.tags ?? [],
+      visibility: payload.visibility ?? "public",
+
+      location: {
+        lat: payload.location.lat,
+        lng: payload.location.lng,
+
+        // GeoJSON point for nearby queries
+        geo: { type: "Point" as const, coordinates: [payload.location.lng, payload.location.lat] },
+
+        formattedAddress: payload.location.formattedAddress ?? "",
+        placeId: payload.location.placeId ?? "",
+
+        countryCode: payload.location.countryCode.toUpperCase(),
+        countryName: payload.location.countryName ?? "",
+
+        admin1: payload.location.admin1 ?? "",
+        admin1Code: payload.location.admin1Code ?? "",
+
+        city: payload.location.city,
+        cityKey,
+
+        postalCode: payload.location.postalCode ?? "",
+        neighborhood: payload.location.neighborhood ?? "",
+
+        source: payload.location.source ?? "user_typed",
+      },
+
+      createdAt: now,
+      updatedAt: now,
     };
+
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB || "myApp");
 
     const res = await db.collection("events").insertOne(doc);
 
@@ -64,14 +166,46 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
+
     const limit = Math.min(Number(searchParams.get("limit") || 200), 500);
+
+    // Filters
+    const countryCode = (searchParams.get("country") || "").trim().toUpperCase();
+    const admin1 = (searchParams.get("admin1") || "").trim();
+    const city = (searchParams.get("city") || "").trim(); // accept raw city name too
+    const cityKey = (searchParams.get("cityKey") || (city ? normKey(city) : "")).trim();
+
+    // Nearby filter
+    const nearLat = searchParams.get("nearLat");
+    const nearLng = searchParams.get("nearLng");
+    const radiusM = searchParams.get("radiusM");
+
+    const query: any = {};
+
+    if (countryCode) query["location.countryCode"] = countryCode;
+    if (admin1) query["location.admin1"] = admin1;
+    if (cityKey) query["location.cityKey"] = cityKey;
+
+    // If nearby params exist, use geo query
+    if (nearLat && nearLng) {
+      const lat = Number(nearLat);
+      const lng = Number(nearLng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        query["location.geo"] = {
+          $near: {
+            $geometry: { type: "Point", coordinates: [lng, lat] },
+            ...(radiusM && Number.isFinite(Number(radiusM)) ? { $maxDistance: Number(radiusM) } : {}),
+          },
+        };
+      }
+    }
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB || "myApp");
 
     const events = await db
       .collection("events")
-      .find({})
+      .find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
       .toArray();
