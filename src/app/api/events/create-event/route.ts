@@ -18,60 +18,85 @@ function normKey(s: string) {
     .replace(/\s/g, "-");
 }
 
-/**
- * If you want server-side enrichment later, you can plug reverse-geocoding here.
- * For now, we enforce structured fields for reliable city/country filtering.
- */
-
 const LocationSchema = z.object({
   lat: z.number().finite(),
   lng: z.number().finite(),
 
-  // display / identity (optional but recommended)
   formattedAddress: z.string().max(300).optional().default(""),
   placeId: z.string().max(200).optional(),
 
-  // structured fields (what you will filter on)
-  countryCode: z.string().min(2).max(2),          // e.g., "US"
+  countryCode: z.string().min(2).max(2),
   countryName: z.string().max(80).optional().default(""),
 
-  admin1: z.string().max(120).optional().default(""),      // state/province name
-  admin1Code: z.string().max(10).optional().default(""),   // e.g., "NY"
+  admin1: z.string().max(120).optional().default(""),
+  admin1Code: z.string().max(10).optional().default(""),
 
   city: z.string().min(1).max(120),
-  cityKey: z.string().max(140).optional(),                 // if not provided, derived from city
+  cityKey: z.string().max(140).optional(),
+
   postalCode: z.string().max(20).optional().default(""),
   neighborhood: z.string().max(120).optional().default(""),
 
   source: z.enum(["user_typed", "places_autocomplete", "reverse_geocode"]).optional().default("user_typed"),
 });
 
-const EventCreateSchema = z.object({
-  title: z.string().min(1).max(120),
-  emoji: z.string().optional().default("📍"),
+const EventCreateSchema = z
+  .object({
+    title: z.string().min(1).max(120),
+    emoji: z.string().optional().default("📍"),
 
-  // Preferred (future-proof): ISO datetime
-  startsAt: z.string().datetime().optional(),
+    // creator (frontend sends creatorClerkId, keep clerkUserId for backward compat)
+    creatorClerkId: z.string().optional().default(""),
+    clerkUserId: z.string().optional().default(""),
 
-  // Backward compatible (optional)
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
-  time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).default(""),
+    // kind/pricing
+    kind: z.enum(["free", "service"]).optional().default("free"),
+    priceCents: z.number().int().nullable().optional().default(null),
 
-  timezone: z.string().max(60).optional().default(""),
+    // Preferred: ISO datetime
+    startsAt: z.string().datetime().optional(),
 
-  // NEW structured location object
-  location: LocationSchema,
+    // Backward compatible (optional)
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
+    time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).default(""),
 
-  // Optional metadata
-  tags: z.array(z.string().max(40)).optional().default([]),
-  visibility: z.enum(["public", "private"]).optional().default("public"),
-});
+    timezone: z.string().max(60).optional().default(""),
+
+    location: LocationSchema,
+
+    tags: z.array(z.string().max(40)).optional().default([]),
+    visibility: z.enum(["public", "private"]).optional().default("public"),
+  })
+  .superRefine((p, ctx) => {
+    const creator = (p.creatorClerkId || p.clerkUserId || "").trim();
+    if (!creator) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["creatorClerkId"], message: "creatorClerkId is required" });
+    }
+
+    if (p.kind === "service") {
+      if (p.priceCents == null || p.priceCents <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["priceCents"],
+          message: "priceCents must be > 0 for service events",
+        });
+      }
+    } else {
+      // free event -> force null (avoid inconsistent records)
+      if (p.priceCents !== null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["priceCents"],
+          message: "priceCents must be null for free events",
+        });
+      }
+    }
+  });
 
 function buildStartsAt(payload: z.infer<typeof EventCreateSchema>) {
   if (payload.startsAt) return new Date(payload.startsAt);
 
-  // If date/time provided but no startsAt, store a best-effort UTC Date.
-  // (You can later improve with date-fns-tz/luxon using payload.timezone.)
+  // Best-effort UTC Date when date/time provided
   if (payload.date && payload.time) {
     const d = new Date(`${payload.date}T${payload.time}:00Z`);
     return Number.isFinite(d.getTime()) ? d : null;
@@ -88,18 +113,14 @@ export async function POST(req: Request) {
     const parsed = EventCreateSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid payload", details: parsed.error.flatten() },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 400 });
     }
 
     const payload = parsed.data;
 
-    const cityKey = payload.location.cityKey?.trim()
-      ? payload.location.cityKey
-      : normKey(payload.location.city);
+    const creatorClerkId = (payload.creatorClerkId || payload.clerkUserId || "").trim();
 
+    const cityKey = payload.location.cityKey?.trim() ? payload.location.cityKey : normKey(payload.location.city);
     const startsAt = buildStartsAt(payload);
 
     const now = new Date();
@@ -107,21 +128,27 @@ export async function POST(req: Request) {
     const doc = {
       title: payload.title,
       emoji: payload.emoji ?? "📍",
+
+      creatorClerkId,
+      kind: payload.kind,
+      priceCents: payload.priceCents,
+
       timezone: payload.timezone ?? "",
 
       // Keep both: startsAt (preferred) + date/time (compat)
-      startsAt: startsAt, // can be null
+      startsAt, // can be null
       date: payload.date ?? "",
       time: payload.time ?? "",
 
       tags: payload.tags ?? [],
       visibility: payload.visibility ?? "public",
 
+      status: "active" as const,
+
       location: {
         lat: payload.location.lat,
         lng: payload.location.lng,
 
-        // GeoJSON point for nearby queries
         geo: { type: "Point" as const, coordinates: [payload.location.lng, payload.location.lat] },
 
         formattedAddress: payload.location.formattedAddress ?? "",
@@ -169,13 +196,14 @@ export async function GET(req: Request) {
 
     const limit = Math.min(Number(searchParams.get("limit") || 200), 500);
 
-    // Filters
     const countryCode = (searchParams.get("country") || "").trim().toUpperCase();
     const admin1 = (searchParams.get("admin1") || "").trim();
-    const city = (searchParams.get("city") || "").trim(); // accept raw city name too
+    const city = (searchParams.get("city") || "").trim();
     const cityKey = (searchParams.get("cityKey") || (city ? normKey(city) : "")).trim();
 
-    // Nearby filter
+    const kind = (searchParams.get("kind") || "").trim(); // "free" | "service"
+    const status = (searchParams.get("status") || "").trim(); // "active" etc.
+
     const nearLat = searchParams.get("nearLat");
     const nearLng = searchParams.get("nearLng");
     const radiusM = searchParams.get("radiusM");
@@ -186,7 +214,9 @@ export async function GET(req: Request) {
     if (admin1) query["location.admin1"] = admin1;
     if (cityKey) query["location.cityKey"] = cityKey;
 
-    // If nearby params exist, use geo query
+    if (kind === "free" || kind === "service") query.kind = kind;
+    if (status) query.status = status;
+
     if (nearLat && nearLng) {
       const lat = Number(nearLat);
       const lng = Number(nearLng);
@@ -203,12 +233,7 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB || "myApp");
 
-    const events = await db
-      .collection("events")
-      .find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .toArray();
+    const events = await db.collection("events").find(query).sort({ createdAt: -1 }).limit(limit).toArray();
 
     return NextResponse.json({
       ok: true,
