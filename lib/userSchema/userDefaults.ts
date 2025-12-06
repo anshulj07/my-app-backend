@@ -43,10 +43,18 @@ export type AppUserDoc = {
   };
 
   onboarding: {
-    step: "none" | "name" | "interests" | "about" | "photos" | "complete";
+    step:
+      | "none"
+      | "name"
+      | "dateOfBirth"
+      | "gender"
+      | "interests"
+      | "about"
+      | "photos"
+      | "complete";
     completed: boolean;
   };
-
+  
   isDeleted: boolean;
 
   createdAt: Date;

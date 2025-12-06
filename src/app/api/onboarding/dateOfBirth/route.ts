@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         "profile.dob": dob,
         "profile.age": age, // optional, but handy
 
-        "onboarding.step": "interests",
+        "onboarding.step": "gender",
         "onboarding.completed": false,
 
         updatedAt: new Date(),

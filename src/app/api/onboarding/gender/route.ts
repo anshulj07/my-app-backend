@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         "profile.gender": gender,
 
         // next step
-        "onboarding.step": "dob",
+        "onboarding.step": "interests",
         "onboarding.completed": false,
 
         updatedAt: new Date(),

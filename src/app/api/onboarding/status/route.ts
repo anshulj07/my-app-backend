@@ -5,11 +5,21 @@ import clientPromise from "../../../../../lib/mongodb";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Step = "none" | "name" | "interests" | "about" | "photos" | "complete";
+type Step =
+  | "none"
+  | "name"
+  | "dateOfBirth"
+  | "gender"
+  | "interests"
+  | "about"
+  | "photos"
+  | "complete";
 
 const STEP_TO_ROUTE: Record<Step, string> = {
   none: "/(onboarding)/name",
   name: "/(onboarding)/name",
+  dateOfBirth: "/(onboarding)/dateOfBirth",
+  gender: "/(onboarding)/gender",
   interests: "/(onboarding)/interests",
   about: "/(onboarding)/about",
   photos: "/(onboarding)/photos",
@@ -42,7 +52,7 @@ export async function GET(req: Request) {
     // If user doc not found, force onboarding start.
     if (!doc) {
       return NextResponse.json(
-        { completed: false, step: "name", nextRoute: "/(onboarding)/name" },
+        { completed: false, step: "name", nextRoute: STEP_TO_ROUTE.name },
         { headers: { "Cache-Control": "no-store" } }
       );
     }
@@ -50,16 +60,17 @@ export async function GET(req: Request) {
     const stepRaw = doc?.onboarding?.step;
     const completedRaw = doc?.onboarding?.completed;
 
-    const step: Step =
-      stepRaw === "none" ||
-      stepRaw === "name" ||
-      stepRaw === "interests" ||
-      stepRaw === "about" ||
-      stepRaw === "photos" ||
-      stepRaw === "complete"
-        ? stepRaw
-        : "name";
+    const isValidStep = (x: any): x is Step =>
+      x === "none" ||
+      x === "name" ||
+      x === "dateOfBirth" ||
+      x === "gender" ||
+      x === "interests" ||
+      x === "about" ||
+      x === "photos" ||
+      x === "complete";
 
+    const step: Step = isValidStep(stepRaw) ? stepRaw : "name";
     const completed = completedRaw === true || step === "complete";
 
     return NextResponse.json(
