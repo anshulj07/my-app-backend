@@ -43,7 +43,7 @@ export type AppUserDoc = {
   };
 
   onboarding: {
-    step: "none" | "name" | "interests" | "about" | "complete";
+    step: "none" | "name" | "interests" | "about" | "photos" | "complete";
     completed: boolean;
   };
 
