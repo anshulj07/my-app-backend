@@ -1,3 +1,4 @@
+// app/api/events/create-event/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { z } from "zod";
@@ -43,6 +44,10 @@ const LocationSchema = z.object({
 const EventCreateSchema = z
   .object({
     title: z.string().min(1).max(120),
+
+    // ✅ NEW: description
+    description: z.string().max(2000).optional().default(""),
+
     emoji: z.string().optional().default("📍"),
 
     // creator (frontend sends creatorClerkId, keep clerkUserId for backward compat)
@@ -127,6 +132,10 @@ export async function POST(req: Request) {
 
     const doc = {
       title: payload.title,
+
+      // ✅ NEW: description stored on event
+      description: (payload.description ?? "").trim(),
+
       emoji: payload.emoji ?? "📍",
 
       creatorClerkId,
@@ -203,6 +212,7 @@ export async function GET(req: Request) {
 
     const kind = (searchParams.get("kind") || "").trim(); // "free" | "service"
     const status = (searchParams.get("status") || "").trim(); // "active" etc.
+    const visibility = (searchParams.get("visibility") || "").trim(); // "public" | "private"
 
     const nearLat = searchParams.get("nearLat");
     const nearLng = searchParams.get("nearLng");
@@ -216,6 +226,7 @@ export async function GET(req: Request) {
 
     if (kind === "free" || kind === "service") query.kind = kind;
     if (status) query.status = status;
+    if (visibility === "public" || visibility === "private") query.visibility = visibility;
 
     if (nearLat && nearLng) {
       const lat = Number(nearLat);
