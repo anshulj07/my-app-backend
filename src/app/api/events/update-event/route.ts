@@ -53,10 +53,14 @@ const PatchFieldsSchema = z
     title: z.string().min(1).max(120).optional(),
     emoji: z.string().optional(),
 
-    // ✅ new
+    // ✅ description
     description: z.string().max(2000).optional(),
 
-    kind: z.enum(["free", "service"]).optional(),
+    // ✅ accept both old + new kinds for backward compatibility
+    // - old: "free" | "service"
+    // - new: "event_free" | "event_paid" | "service"
+    kind: z.enum(["free", "service", "event_free", "event_paid"]).optional(),
+
     priceCents: z.number().int().nullable().optional(),
 
     // ✅ Preferred: ISO datetime
@@ -95,6 +99,22 @@ function buildStartsAtFromDateTime(date?: string, time?: string) {
   return Number.isFinite(d.getTime()) ? d : null;
 }
 
+/**
+ * Normalize kinds so DB stays consistent:
+ * - "event_free" -> "free"
+ * - "event_paid" -> "event_paid" (kept distinct; treat as paid requiring price)
+ * - "free" -> "free"
+ * - "service" -> "service"
+ */
+function normalizeKind(kind?: string) {
+  if (!kind) return undefined;
+  if (kind === "event_free") return "free";
+  if (kind === "event_paid") return "event_paid";
+  if (kind === "free") return "free";
+  if (kind === "service") return "service";
+  return undefined;
+}
+
 export async function PATCH(req: Request) {
   const auth = requireApiKey(req);
   if (auth) return auth;
@@ -115,7 +135,9 @@ export async function PATCH(req: Request) {
     const emoji = (u.emoji ?? payload.emoji) ?? undefined;
     const description = (u.description ?? payload.description) ?? undefined;
 
-    const kind = (u.kind ?? payload.kind) ?? undefined;
+    const rawKind = (u.kind ?? payload.kind) ?? undefined;
+    const kind = normalizeKind(rawKind);
+
     const priceCents = u.priceCents ?? payload.priceCents;
 
     const date = u.date ?? payload.date;
@@ -139,11 +161,14 @@ export async function PATCH(req: Request) {
     if (!_oid) return NextResponse.json({ error: "Invalid event id (_id)" }, { status: 400 });
 
     // ✅ kind/price rules
-    if (kind === "service") {
+    // Paid kinds require valid price
+    if (kind === "service" || kind === "event_paid") {
       if (priceCents == null || typeof priceCents !== "number" || priceCents <= 0) {
-        return NextResponse.json({ error: "priceCents must be > 0 when kind=service" }, { status: 400 });
+        return NextResponse.json({ error: "priceCents must be > 0 when kind=service/event_paid" }, { status: 400 });
       }
     }
+
+    // Free kind must not carry price
     if (kind === "free" && typeof priceCents !== "undefined" && priceCents !== null) {
       return NextResponse.json({ error: "priceCents must be null when kind=free (or omit priceCents)" }, { status: 400 });
     }
@@ -153,14 +178,14 @@ export async function PATCH(req: Request) {
 
     if (typeof title !== "undefined") $set.title = title;
     if (typeof emoji !== "undefined") $set.emoji = emoji;
-
-    // ✅ description patch
     if (typeof description !== "undefined") $set.description = description;
 
     if (typeof kind !== "undefined") {
       $set.kind = kind;
       if (kind === "free") $set.priceCents = null; // enforce consistency
     }
+
+    // If priceCents explicitly provided, set it. (Kind rules above already validate.)
     if (typeof priceCents !== "undefined") $set.priceCents = priceCents;
 
     if (typeof timezone !== "undefined") $set.timezone = timezone ?? "";
@@ -169,8 +194,8 @@ export async function PATCH(req: Request) {
     if (typeof time !== "undefined") $set.time = time ?? "";
 
     // ✅ startsAt handling:
-    // - if startsAt provided: trust it (can also clear it by sending null-ish? we keep "omit to not change")
-    // - else if date/time patched: recompute best-effort but only if both available
+    // - if startsAt provided: trust it
+    // - else if date/time patched: recompute best-effort (requires db fetch to combine with existing)
     if (typeof startsAtStr !== "undefined") {
       const d = startsAtStr ? new Date(startsAtStr) : null;
       if (d && !Number.isFinite(d.getTime())) {
@@ -178,9 +203,6 @@ export async function PATCH(req: Request) {
       }
       $set.startsAt = d;
     } else {
-      // if user updated date/time in this request (either one), we should try to recompute using:
-      // - patched date/time if provided
-      // - existing date/time from db otherwise (so we need to fetch current doc first)
       const dateTouched = typeof (u.date ?? payload.date) !== "undefined";
       const timeTouched = typeof (u.time ?? payload.time) !== "undefined";
 
@@ -201,7 +223,6 @@ export async function PATCH(req: Request) {
         const nextTime = typeof time !== "undefined" ? (time ?? "") : (existing as any).time ?? "";
 
         const computed = buildStartsAtFromDateTime(nextDate, nextTime);
-        // only set startsAt if we can compute a valid one; otherwise leave it untouched
         if (computed) $set.startsAt = computed;
       }
     }
@@ -242,7 +263,6 @@ export async function PATCH(req: Request) {
     // ✅ only creator can update
     const findQuery = { _id: _oid, creatorClerkId: creator };
 
-    // ✅ avoids TS "res possibly null" by using updateOne + findOne
     const upd = await db.collection("events").updateOne(findQuery, { $set });
 
     if (upd.matchedCount === 0) {

@@ -106,14 +106,18 @@ export async function GET(req: Request) {
 
     const events = docs.map((e: any) => ({ ...e, _id: e._id.toString() }));
 
+    console.log("sample event keys:", Object.keys(docs?.[0] || {}));
+    console.log("sample description:", docs?.[0]?.description);
+
+
     // Return next cursor
     const last = docs[docs.length - 1];
     const nextCursor =
       last
         ? {
-            cursorCreatedAt: (last.createdAt ? new Date(last.createdAt) : new Date()).toISOString(),
-            cursorId: last._id.toString(),
-          }
+          cursorCreatedAt: (last.createdAt ? new Date(last.createdAt) : new Date()).toISOString(),
+          cursorId: last._id.toString(),
+        }
         : null;
 
     return NextResponse.json({ ok: true, events, nextCursor });
