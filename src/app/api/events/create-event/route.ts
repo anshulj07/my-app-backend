@@ -1,104 +1,13 @@
 // app/api/events/create-event/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
-import { z } from "zod";
+import { EventCreateSchema, buildStartsAt, normKey } from "../../../../../lib/eventSchema/eventDefault";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
   if (!expected) return null;
   const got = req.headers.get("x-api-key");
   return got === expected ? null : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
-
-function normKey(s: string) {
-  return s
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s/g, "-");
-}
-
-const LocationSchema = z.object({
-  lat: z.number().finite(),
-  lng: z.number().finite(),
-
-  formattedAddress: z.string().max(300).optional().default(""),
-  placeId: z.string().max(200).optional(),
-
-  countryCode: z.string().min(2).max(2),
-  countryName: z.string().max(80).optional().default(""),
-
-  admin1: z.string().max(120).optional().default(""),
-  admin1Code: z.string().max(10).optional().default(""),
-
-  city: z.string().min(1).max(120),
-  cityKey: z.string().max(140).optional(),
-
-  postalCode: z.string().max(20).optional().default(""),
-  neighborhood: z.string().max(120).optional().default(""),
-
-  source: z.enum(["user_typed", "places_autocomplete", "reverse_geocode"]).optional().default("user_typed"),
-});
-
-const EventCreateSchema = z
-  .object({
-    title: z.string().min(1).max(120),
-    description: z.string().max(2000).optional().default(""),
-    emoji: z.string().optional().default("📍"),
-
-    creatorClerkId: z.string().optional().default(""),
-    clerkUserId: z.string().optional().default(""),
-
-    kind: z.enum(["free", "paid", "service"]).optional().default("free"),
-    priceCents: z.number().int().nullable().optional().default(null),
-
-    // ✅ NEW
-    capacity: z.number().int().positive().nullable().optional().default(null),
-
-    startsAt: z.string().datetime().optional(),
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
-    time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).default(""),
-
-    timezone: z.string().max(60).optional().default(""),
-    location: LocationSchema,
-
-    tags: z.array(z.string().max(40)).optional().default([]),
-    visibility: z.enum(["public", "private"]).optional().default("public"),
-  })
-  .superRefine((p, ctx) => {
-    const creator = (p.creatorClerkId || p.clerkUserId || "").trim();
-    if (!creator) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["creatorClerkId"], message: "creatorClerkId is required" });
-    }
-
-    // ✅ paid/service require price; free requires null
-    if (p.kind === "paid" || p.kind === "service") {
-      if (p.priceCents == null || p.priceCents <= 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["priceCents"], message: "priceCents must be > 0 for paid/service" });
-      }
-      // ✅ capacity must NOT be set for paid/service
-      if (p.capacity !== null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["capacity"], message: "capacity must be null for paid/service" });
-      }
-    } else {
-      if (p.priceCents !== null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["priceCents"], message: "priceCents must be null for free events" });
-      }
-      // ✅ free can be open (null) or limited (>0). zod already ensures >0 when number
-      // (no extra rule needed unless you want to enforce some max like <= 500)
-    }
-  });
-
-function buildStartsAt(payload: z.infer<typeof EventCreateSchema>) {
-  if (payload.startsAt) return new Date(payload.startsAt);
-
-  // Best-effort UTC Date when date/time provided
-  if (payload.date && payload.time) {
-    const d = new Date(`${payload.date}T${payload.time}:00Z`);
-    return Number.isFinite(d.getTime()) ? d : null;
-  }
-  return null;
 }
 
 export async function POST(req: Request) {
@@ -116,10 +25,8 @@ export async function POST(req: Request) {
     const payload = parsed.data;
 
     const creatorClerkId = (payload.creatorClerkId || payload.clerkUserId || "").trim();
-
     const cityKey = payload.location.cityKey?.trim() ? payload.location.cityKey : normKey(payload.location.city);
     const startsAt = buildStartsAt(payload);
-
     const now = new Date();
 
     const doc = {
@@ -131,18 +38,21 @@ export async function POST(req: Request) {
       kind: payload.kind,
       priceCents: payload.priceCents,
 
-      capacity: payload.capacity,
+      // ✅ renamed
+      attendance: payload.attendance, // null => open event
+
+      // ✅ store joiners here (start empty)
+      // Even if client sends attendees, we force it to []
+      attendees: [] as string[],
 
       timezone: payload.timezone ?? "",
 
-      // Keep both: startsAt (preferred) + date/time (compat)
       startsAt,
       date: payload.date ?? "",
       time: payload.time ?? "",
 
       tags: payload.tags ?? [],
       visibility: payload.visibility ?? "public",
-
       status: "active" as const,
 
       location: {
@@ -201,7 +111,6 @@ export async function GET(req: Request) {
     const city = (searchParams.get("city") || "").trim();
     const cityKey = (searchParams.get("cityKey") || (city ? normKey(city) : "")).trim();
 
-    // ✅ UPDATED: accept paid too
     const kind = (searchParams.get("kind") || "").trim(); // "free" | "paid" | "service"
     const status = (searchParams.get("status") || "").trim();
     const visibility = (searchParams.get("visibility") || "").trim(); // "public" | "private"
