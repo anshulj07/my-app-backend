@@ -45,7 +45,6 @@ const EventCreateSchema = z
   .object({
     title: z.string().min(1).max(120),
 
-    // ✅ NEW: description
     description: z.string().max(2000).optional().default(""),
 
     emoji: z.string().optional().default("📍"),
@@ -54,8 +53,8 @@ const EventCreateSchema = z
     creatorClerkId: z.string().optional().default(""),
     clerkUserId: z.string().optional().default(""),
 
-    // kind/pricing
-    kind: z.enum(["free", "service"]).optional().default("free"),
+    // ✅ UPDATED: support free + paid + service
+    kind: z.enum(["free", "paid", "service"]).optional().default("free"),
     priceCents: z.number().int().nullable().optional().default(null),
 
     // Preferred: ISO datetime
@@ -78,16 +77,16 @@ const EventCreateSchema = z
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["creatorClerkId"], message: "creatorClerkId is required" });
     }
 
-    if (p.kind === "service") {
+    // ✅ UPDATED: paid + service require price > 0; free requires null
+    if (p.kind === "paid" || p.kind === "service") {
       if (p.priceCents == null || p.priceCents <= 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["priceCents"],
-          message: "priceCents must be > 0 for service events",
+          message: "priceCents must be > 0 for paid/service",
         });
       }
     } else {
-      // free event -> force null (avoid inconsistent records)
       if (p.priceCents !== null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -132,10 +131,7 @@ export async function POST(req: Request) {
 
     const doc = {
       title: payload.title,
-
-      // ✅ NEW: description stored on event
       description: (payload.description ?? "").trim(),
-
       emoji: payload.emoji ?? "📍",
 
       creatorClerkId,
@@ -145,7 +141,7 @@ export async function POST(req: Request) {
       timezone: payload.timezone ?? "",
 
       // Keep both: startsAt (preferred) + date/time (compat)
-      startsAt, // can be null
+      startsAt,
       date: payload.date ?? "",
       time: payload.time ?? "",
 
@@ -210,8 +206,9 @@ export async function GET(req: Request) {
     const city = (searchParams.get("city") || "").trim();
     const cityKey = (searchParams.get("cityKey") || (city ? normKey(city) : "")).trim();
 
-    const kind = (searchParams.get("kind") || "").trim(); // "free" | "service"
-    const status = (searchParams.get("status") || "").trim(); // "active" etc.
+    // ✅ UPDATED: accept paid too
+    const kind = (searchParams.get("kind") || "").trim(); // "free" | "paid" | "service"
+    const status = (searchParams.get("status") || "").trim();
     const visibility = (searchParams.get("visibility") || "").trim(); // "public" | "private"
 
     const nearLat = searchParams.get("nearLat");
@@ -224,7 +221,7 @@ export async function GET(req: Request) {
     if (admin1) query["location.admin1"] = admin1;
     if (cityKey) query["location.cityKey"] = cityKey;
 
-    if (kind === "free" || kind === "service") query.kind = kind;
+    if (kind === "free" || kind === "paid" || kind === "service") query.kind = kind;
     if (status) query.status = status;
     if (visibility === "public" || visibility === "private") query.visibility = visibility;
 
