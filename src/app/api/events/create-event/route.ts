@@ -44,28 +44,23 @@ const LocationSchema = z.object({
 const EventCreateSchema = z
   .object({
     title: z.string().min(1).max(120),
-
     description: z.string().max(2000).optional().default(""),
-
     emoji: z.string().optional().default("📍"),
 
-    // creator (frontend sends creatorClerkId, keep clerkUserId for backward compat)
     creatorClerkId: z.string().optional().default(""),
     clerkUserId: z.string().optional().default(""),
 
-    // ✅ UPDATED: support free + paid + service
     kind: z.enum(["free", "paid", "service"]).optional().default("free"),
     priceCents: z.number().int().nullable().optional().default(null),
 
-    // Preferred: ISO datetime
-    startsAt: z.string().datetime().optional(),
+    // ✅ NEW
+    capacity: z.number().int().positive().nullable().optional().default(null),
 
-    // Backward compatible (optional)
+    startsAt: z.string().datetime().optional(),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
     time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).default(""),
 
     timezone: z.string().max(60).optional().default(""),
-
     location: LocationSchema,
 
     tags: z.array(z.string().max(40)).optional().default([]),
@@ -77,23 +72,21 @@ const EventCreateSchema = z
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["creatorClerkId"], message: "creatorClerkId is required" });
     }
 
-    // ✅ UPDATED: paid + service require price > 0; free requires null
+    // ✅ paid/service require price; free requires null
     if (p.kind === "paid" || p.kind === "service") {
       if (p.priceCents == null || p.priceCents <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["priceCents"],
-          message: "priceCents must be > 0 for paid/service",
-        });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["priceCents"], message: "priceCents must be > 0 for paid/service" });
+      }
+      // ✅ capacity must NOT be set for paid/service
+      if (p.capacity !== null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["capacity"], message: "capacity must be null for paid/service" });
       }
     } else {
       if (p.priceCents !== null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["priceCents"],
-          message: "priceCents must be null for free events",
-        });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["priceCents"], message: "priceCents must be null for free events" });
       }
+      // ✅ free can be open (null) or limited (>0). zod already ensures >0 when number
+      // (no extra rule needed unless you want to enforce some max like <= 500)
     }
   });
 
@@ -137,6 +130,8 @@ export async function POST(req: Request) {
       creatorClerkId,
       kind: payload.kind,
       priceCents: payload.priceCents,
+
+      capacity: payload.capacity,
 
       timezone: payload.timezone ?? "",
 
