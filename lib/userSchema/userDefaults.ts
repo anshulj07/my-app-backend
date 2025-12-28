@@ -3,6 +3,7 @@ export type AppUserDoc = {
 
   clerk: {
     email: string | null;
+    phone: string | null;
     firstName: string | null;
     lastName: string | null;
     imageUrl: string | null;
@@ -38,6 +39,7 @@ export type AppUserDoc = {
 
   verification: {
     emailVerified: boolean | null;
+    phoneVerified: boolean | null;
     idVerified: boolean | null;
     photoVerified: boolean | null;
   };
