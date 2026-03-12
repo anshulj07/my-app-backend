@@ -46,7 +46,7 @@ export async function POST(req: Request) {
           "clerk.firstName": firstName,
           "clerk.lastName": lastName.length ? lastName : null,
         
-          "onboarding.step": "dateOfBirth",
+          "onboarding.step": "username",
           "onboarding.completed": false,
           updatedAt: new Date(),
         },

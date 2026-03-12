@@ -49,12 +49,46 @@ export async function GET(req: Request, context: Ctx) {
   if (!_id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "myApp");
+  const db = client.db("assis_auth");
 
   const doc = await db.collection("events").findOne({ _id });
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json({ ok: true, event: { ...doc, _id: doc._id.toString() } });
+  // ✅ Auto-enrich attendee/pending images from users collection if missing
+  const attendees = Array.isArray(doc.attendees) ? doc.attendees : [];
+  const pending = Array.isArray(doc.pendingRequests) ? doc.pendingRequests : [];
+
+  const allClerkIds = Array.from(new Set([
+    ...attendees.map((a: any) => String(a.clerkId || a.clerkUserId || "")),
+    ...pending.map((p: any) => String(p.clerkUserId || ""))
+  ])).filter(Boolean);
+
+  const usersData = await db.collection("users").find(
+    { clerkUserId: { $in: allClerkIds } },
+    { projection: { clerkUserId: 1, "profile.avatar.url": 1 } }
+  ).toArray();
+
+  const userMap = new Map(usersData.map(u => [u.clerkUserId, u.profile?.avatar?.url || ""]));
+
+  const enrichedAttendees = attendees.map((a: any) => ({
+    ...a,
+    imageUrl: a.imageUrl || userMap.get(String(a.clerkId || a.clerkUserId || "")) || ""
+  }));
+
+  const enrichedPending = pending.map((p: any) => ({
+    ...p,
+    imageUrl: p.imageUrl || userMap.get(String(p.clerkUserId || "")) || ""
+  }));
+
+  return NextResponse.json({
+    ok: true,
+    event: {
+      ...doc,
+      _id: doc._id.toString(),
+      attendees: enrichedAttendees,
+      pendingRequests: enrichedPending
+    }
+  });
 }
 
 export async function PATCH(req: Request, context: Ctx) {
