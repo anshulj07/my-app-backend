@@ -267,13 +267,36 @@ export async function GET(req: Request) {
     });
 
     // ✅ Return all fields needed by map pins + sheets
-    const events = filteredDocs.map((e: any) => ({
-      ...e,
-      _id: e._id.toString(),
-      // Ensure lat/lng are at top level for MapView
-      lat: e.location?.lat ?? null,
-      lng: e.location?.lng ?? null,
+    const allCreatorIds = Array.from(new Set(filteredDocs.map((e: any) => e.creatorClerkId))).filter(Boolean);
+    
+    const usersData = await db.collection("users").find(
+      { clerkUserId: { $in: allCreatorIds } },
+      { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar.url": 1, "clerk.firstName": 1, "clerk.lastName": 1 } }
+    ).toArray();
+
+    const userMap = new Map(usersData.map(u => {
+      const f = u.profile?.firstName || u.clerk?.firstName || "";
+      const l = u.profile?.lastName || u.clerk?.lastName || "";
+      return [
+        u.clerkUserId,
+        { name: `${f} ${l}`.trim() || "User", avatar: u.profile?.avatar?.url || "" }
+      ];
     }));
+
+    const events = filteredDocs.map((e: any) => {
+      const creator = userMap.get(String(e.creatorClerkId || ""));
+      return {
+        ...e,
+        _id: e._id.toString(),
+        creatorName: (e.creatorName && e.creatorName !== "Local Host") 
+          ? e.creatorName 
+          : (creator?.name || "Local Host"),
+        creatorAvatar: creator?.avatar || e.creatorAvatar || "",
+        // Ensure lat/lng are at top level for MapView
+        lat: e.location?.lat ?? null,
+        lng: e.location?.lng ?? null,
+      };
+    });
 
     const last = filteredDocs[filteredDocs.length - 1];
     const nextCursor = last

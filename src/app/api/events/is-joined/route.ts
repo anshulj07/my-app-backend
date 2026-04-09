@@ -109,6 +109,23 @@ export async function GET(req: Request) {
       }, { status: 200 });
     }
 
+    // ✅ Fallback: check bookings collection (incase sync failed or legacy data)
+    const confirmedBooking = await db.collection("bookings").findOne({
+      bookerId: clerkUserId,
+      eventId: eventId,
+      status: "confirmed"
+    });
+
+    if (confirmedBooking) {
+      return NextResponse.json({
+        ok: true,
+        joined: true,
+        pending: false,
+        checkInOtp: confirmedBooking.checkInOtp || "",
+        checkedIn: false,
+      }, { status: 200 });
+    }
+
     // Check pendingRequests (approval events)
     const isPending = ((ev as any).pendingRequests || []).some(
       (p: any) => String(p.clerkUserId || "") === clerkUserId

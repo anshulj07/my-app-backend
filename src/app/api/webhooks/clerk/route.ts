@@ -1,7 +1,6 @@
 import { Webhook } from "svix";
 import type { WebhookEvent } from "@clerk/nextjs/server";
 import clientPromise from "../../../../../lib/mongodb";
-import { buildUserInsertDefaults } from "../../../../../lib/userSchema/userDefaults";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,7 +60,6 @@ export async function POST(req: Request) {
     await users.updateOne(
       { clerkUserId },
       {
-        // write clerk as ONE object (no clerk.email, etc.)
         $set: {
           clerk: {
             email,
@@ -70,12 +68,16 @@ export async function POST(req: Request) {
             imageUrl,
             createdAt: clerkCreatedAt,
           },
+          "profile.email": email,
           isDeleted: false,
           updatedAt: new Date(),
         },
-
-        // insert defaults WITHOUT clerk
-        $setOnInsert: buildUserInsertDefaults({ clerkUserId }),
+        $setOnInsert: {
+          clerkUserId,
+          onboarding: { completed: false, step: "name" },
+          createdAt: new Date(),
+          deletedAt: null,
+        },
       },
       { upsert: true }
     );

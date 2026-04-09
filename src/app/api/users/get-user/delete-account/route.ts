@@ -17,7 +17,7 @@ function checkApiKey(req: NextRequest): NextResponse | null {
   return null;
 }
 
-const DB = process.env.MONGODB_DB || "assis_auth";
+const DB = "assis_auth";
 
 export async function DELETE(req: NextRequest) {
   const authErr = checkApiKey(req);

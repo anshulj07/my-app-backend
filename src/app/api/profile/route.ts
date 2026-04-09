@@ -246,8 +246,7 @@ export async function GET(req: Request) {
     if (!clerkUserId) {
       return NextResponse.json({ error: "clerkUserId is required" }, { status: 400 });
     }
-
-    const { users } = await getUsersCollection();
+    const { db, users } = await getUsersCollection();
 
     await users.updateOne(
       { clerkUserId },
@@ -270,6 +269,9 @@ export async function GET(req: Request) {
       { clerkUserId, isDeleted: { $ne: true } },
       { projection: { _id: 0, clerkUserId: 1, profile: 1, clerk: 1, onboarding: 1 } }
     );
+    
+    // Fetch user stats from separate collection
+    const stats = await db.collection("user_stats").findOne({ clerkUserId });
 
     const safeDoc: any = doc ?? {};
     const p: any = safeDoc.profile ?? {};
@@ -284,6 +286,7 @@ export async function GET(req: Request) {
         clerkUserId,
         name: name || "Your Name",
         username: typeof p.username === "string" ? p.username : "",
+        email: p.email || c.email || "",
         about: typeof p.about === "string" ? p.about : "",
         interests: Array.isArray(p.interests) ? p.interests : [],
         languages: Array.isArray(p.languages) ? p.languages : [],
@@ -295,6 +298,19 @@ export async function GET(req: Request) {
         phone: p.phone || "",
         dateOfBirth: p.dateOfBirth || null,
         isPrivate: !!p.isPrivate,
+        // ✅ Stats from user_stats collection
+        rating: stats?.rating ?? 0,
+        eventsHosted: stats?.eventsHosted ?? 0,
+        totalAttendees: stats?.totalAttendees ?? 0,
+        repeatedAttendees: stats?.repeatedAttendees ?? 0,
+        newAttendees: stats?.newAttendees ?? 0,
+        reviewsCount: stats?.reviewsCount ?? 0,
+        // ✅ Earnings (in paise, frontend converts to ₹)
+        thisMonthEarning: stats?.thisMonthEarning ?? 0,
+        overallEarning: stats?.overallEarning ?? 0,
+        // ✅ Services (titles of service-kind events)
+        services: Array.isArray(stats?.services) ? stats.services : [],
+        isVerified: !!safeDoc.verification?.idVerified,
         onboarding: safeDoc.onboarding ?? null,
       },
       { status: 200, headers: { "Cache-Control": "no-store" } }

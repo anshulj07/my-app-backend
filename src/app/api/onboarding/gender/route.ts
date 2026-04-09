@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   if (!clerkUserId) return NextResponse.json({ error: "clerkUserId is required" }, { status: 400 });
 
   const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "assis_auth");
+  const db = client.db("assis_auth");
 
   const user = await db.collection("users").findOne(
     { clerkUserId },
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   if (!clerkUserId) return NextResponse.json({ error: "clerkUserId is required" }, { status: 400 });
 
   const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "assis_auth");
+  const db = client.db("assis_auth");
 
   const result = await db.collection("users").updateOne(
     { clerkUserId },

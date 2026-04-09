@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const client = await clientPromise;
 
   // ✅ your users are here:
-  const db = client.db("assist_users");
+  const db = client.db("assis_auth");
 
   const user = await db.collection("users").findOne(
     { clerkUserId }, // ✅ matches your screenshot field name

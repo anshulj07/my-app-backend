@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     if (!creatorClerkId) return NextResponse.json({ error: "creatorClerkId is required" }, { status: 400 });
 
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB || "myApp");
+    const db = client.db("assis_auth");
 
     const ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
     if (!ev) return NextResponse.json({ error: "Event not found" }, { status: 404 });

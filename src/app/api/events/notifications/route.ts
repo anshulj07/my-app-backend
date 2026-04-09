@@ -42,6 +42,7 @@ export async function GET(req: Request) {
       userImageUrl: string;
       message: string;
       timestamp: string;
+      paid?: boolean; // ✅ Added to track payment status
     };
 
     const items: NotifItem[] = [];
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
       const eventTitle = String((ev as any).title || "Event");
       const eventEmoji = String((ev as any).emoji || "📍");
 
-      // Recent joins (last 30 per event)
+      // Recent joins (last 30 per event) - confirmed attendees
       for (const a of ((ev as any).attendees || []).slice(-30)) {
         items.push({
           id: `join-${eventId}-${a.clerkId}`,
@@ -62,10 +63,11 @@ export async function GET(req: Request) {
           userImageUrl: String(a.imageUrl || ""),
           message: String(a.message || ""),
           timestamp: a.joinedAt ? new Date(a.joinedAt).toISOString() : new Date().toISOString(),
+          paid: !!a.razorpayPaymentId, // If payment ID exists, it's paid
         });
       }
 
-      // Pending approval requests
+      // Pending approval requests - not yet attendees
       for (const p of ((ev as any).pendingRequests || [])) {
         items.push({
           id: `pending-${eventId}-${p.clerkUserId}`,
@@ -76,6 +78,7 @@ export async function GET(req: Request) {
           userImageUrl: String(p.imageUrl || ""),
           message: String(p.message || ""),
           timestamp: p.requestedAt ? new Date(p.requestedAt).toISOString() : new Date().toISOString(),
+          paid: !!p.paid, // ✅ reflecting the new 'paid' flag from verify-payment
         });
       }
     }

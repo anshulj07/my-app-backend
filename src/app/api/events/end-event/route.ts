@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
+import { updateHostStats } from "../../../../../lib/statsUpdater";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
@@ -44,13 +45,38 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Only the creator can end this event" }, { status: 403 });
     }
 
+    // 💰 CALCULATE FINAL EARNINGS 💰
+    const attendees: any[] = Array.isArray((ev as any).attendees) ? (ev as any).attendees : [];
+    // Count attendees who paid (isPaid flag or razorpayPaymentId)
+    const paidAttendees = attendees.filter(a => a.isPaid === true || !!a.razorpayPaymentId);
+    const priceCents = Number((ev as any).priceCents || 0);
+    const finalEarnings = paidAttendees.length * priceCents;
+
     await db.collection("events").updateOne(
       { _id: new ObjectId(eventId) },
-      { $set: { status: "ended", endedAt: new Date(), updatedAt: new Date() } }
+      { 
+        $set: { 
+          status: "ended", 
+          endedAt: new Date(), 
+          updatedAt: new Date(),
+          finalEarnings,
+          finalAttendeeCount: paidAttendees.length
+        } 
+      }
     );
 
-    return NextResponse.json({ ok: true, status: "ended" });
+    // 🔄 SYNC HOST STATS IMMEDIATELY 🔄
+    const newStats = await updateHostStats(creatorClerkId);
+
+    return NextResponse.json({ 
+      ok: true, 
+      status: "ended", 
+      finalEarnings, 
+      paidAttendees: paidAttendees.length,
+      newStats 
+    });
   } catch (e: any) {
+    console.error("PATCH /api/events/end-event failed:", e);
     return NextResponse.json({ error: "Server error", detail: e?.message ?? "" }, { status: 500 });
   }
 }

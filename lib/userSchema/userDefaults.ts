@@ -12,6 +12,7 @@ export type AppUserDoc = {
   profile: {
     firstName: string | null;
     lastName: string | null;
+    email: string | null;
     about: string | null;
     gender: string | null;
     age: number | null;
@@ -74,6 +75,7 @@ export function buildUserInsertDefaults(params: { clerkUserId: string }) {
     profile: {
       firstName: null,
       lastName: null,
+      email: null,
       about: null,
       gender: null,
       age: null,

@@ -1,5 +1,6 @@
-// middleware.ts
-// ✅ Updated: Razorpay webhook route public add kiya
+// src/proxy.ts
+// ✅ Updated: Renamed from middleware to proxy for Next.js 16
+// ✅ Added more public routes for Expo app support
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
@@ -16,14 +17,18 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks/clerk(.*)",
-  "/api/webhooks/razorpay(.*)",   // ✅ NEW — Razorpay webhook public hona chahiye
+  "/api/webhooks/razorpay(.*)",
   "/api/onboarding/name(.*)",
   "/api/onboarding/interests(.*)",
   "/api/onboarding/about(.*)",
   "/api/onboarding/photos(.*)",
   "/api/onboarding/gender(.*)",
   "/api/onboarding/dateOfBirth(.*)",
-  "/api/payment/create-order(.*)", // ✅ Payment routes bhi public (apna x-api-key auth use karte hain)
+  "/api/onboarding/status(.*)",    // ✅ NEW — Status monitoring for mobile apps
+  "/api/events/get-events(.*)",    // ✅ NEW — Fetching events for explore screen
+  "/api/events/notifications(.*)", // ✅ NEW — Fetching notifications
+  "/api/profile(.*)",              // ✅ NEW — Generic profile fetching (using x-api-key)
+  "/api/payment/create-order(.*)",
   "/api/payment/verify(.*)",
 ]);
 
@@ -36,7 +41,7 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   return res;
 });
 
-export default function middleware(req: NextRequest) {
+export default function proxy(req: NextRequest) {
   if (req.method === "OPTIONS") {
     return new NextResponse(null, { status: 200, headers: corsHeaders });
   }

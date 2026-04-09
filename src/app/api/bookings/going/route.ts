@@ -148,6 +148,7 @@
 // app/api/bookings/going/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
+import { ObjectId } from "mongodb";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
@@ -171,11 +172,36 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Events where user is a confirmed attendee
+    // ✅ Events where user is a confirmed attendee (in events collection)
     const joinedDocs = await db.collection("events")
       .find({ "attendees.clerkId": clerkUserId })
       .sort({ startsAt: 1, createdAt: -1 })
       .toArray();
+
+    // ✅ Fallback: Events where user has a CONFIRMED booking in the bookings collection
+    // This handles cases where the event document was not updated correctly
+    const explicitBookings = await db.collection("bookings")
+      .find({ bookerId: clerkUserId, status: "confirmed", type: "event" })
+      .toArray();
+    
+    const bookedEventIds = explicitBookings.map(b => b.eventId).filter(Boolean);
+    let extraJoinedDocs: any[] = [];
+    if (bookedEventIds.length > 0) {
+      const alreadyFoundIds = new Set(joinedDocs.map(d => d._id.toString()));
+      const missingIds = bookedEventIds
+        .filter(id => !alreadyFoundIds.has(id))
+        .map(id => { try { return new ObjectId(id); } catch { return null; } })
+        .filter(Boolean);
+      
+      if (missingIds.length > 0) {
+        extraJoinedDocs = await db.collection("events")
+          .find({ _id: { $in: missingIds } } as any)
+          .toArray();
+      }
+    }
+
+    // Combine all joined documents
+    const allJoinedDocs = [...joinedDocs, ...extraJoinedDocs];
 
     // ✅ Events where user has a PENDING approval request
     const pendingDocs = await db.collection("events")
@@ -184,18 +210,34 @@ export async function GET(req: Request) {
       .toArray();
 
     // Map joined events
-    const joinedEvents = joinedDocs.map((e: any) => {
+    const joinedIds = new Set();
+    const joinedEvents = allJoinedDocs.map((e: any) => {
+      joinedIds.add(e._id.toString());
+      
+      // Find the specific attendee record for this user
       const myEntry = Array.isArray(e.attendees)
         ? e.attendees.find((a: any) => String(a.clerkId) === String(clerkUserId))
         : null;
 
+      // Find the specific booking for this user to check detailed status
+      const myBooking = explicitBookings.find(b => String(b.eventId) === e._id.toString());
+
+      /**
+       * ── STATUS CLASSIFICATION ──
+       * If they are in the attendees list, they are definitely JOINED.
+       * If they are NOT in attendees but have a booking that is 'confirmed', they are also JOINED.
+       * If they have a booking that is 'paid_pending_approval', they are still PENDING.
+       */
+      const isActuallyJoined = !!myEntry || (myBooking?.status === "confirmed");
+      const currentStatus = isActuallyJoined ? "joined" : "pending";
+
       return {
         ...e,
         _id: e._id.toString(),
-        myCheckInOtp: myEntry?.checkInOtp || null,
-        myCheckedIn: myEntry?.checkedIn ?? false,
-        myJoinStatus: "joined",
-        // Strip other attendees' private OTPs
+        myCheckInOtp: myEntry?.checkInOtp || myBooking?.checkInOtp || null,
+        myCheckedIn: !!myEntry?.checkedIn,
+        myJoinStatus: currentStatus, // Correctly reflecting approval status
+        isPaid: !!myBooking?.razorpayPaymentId,
         attendees: Array.isArray(e.attendees)
           ? e.attendees.map((a: any) => ({
               clerkId: a.clerkId,
@@ -204,12 +246,10 @@ export async function GET(req: Request) {
               checkedIn: a.checkedIn ?? false,
             }))
           : [],
-        pendingRequests: undefined, // don't expose
+        pendingRequests: undefined, 
       };
     });
 
-    // Map pending events
-    const joinedIds = new Set(joinedDocs.map((e: any) => e._id.toString()));
     const pendingEvents = pendingDocs
       .filter((e: any) => !joinedIds.has(e._id.toString())) // no duplicates
       .map((e: any) => ({
@@ -217,7 +257,7 @@ export async function GET(req: Request) {
         _id: e._id.toString(),
         myCheckInOtp: null,
         myCheckedIn: false,
-        myJoinStatus: "pending", // ✅ key field
+        myJoinStatus: "pending", 
         attendees: [],
         pendingRequests: undefined,
       }));

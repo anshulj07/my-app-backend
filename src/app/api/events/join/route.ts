@@ -103,6 +103,62 @@ export async function POST(req: Request) {
       }
     );
 
+    // ✅ Track totalAttendees in user_stats for the event host
+    const hostClerkId = String((ev as any).creatorClerkId || "");
+    if (hostClerkId && hostClerkId !== clerkUserId) {
+      // Check if this attendee has joined any other event by this host (repeated vs new)
+      const previousJoin = await db.collection("events").findOne({
+        creatorClerkId: hostClerkId,
+        _id: { $ne: new ObjectId(eventId) },
+        "attendees.clerkId": clerkUserId,
+      });
+      const isRepeated = !!previousJoin;
+
+      await db.collection("user_stats").updateOne(
+        { clerkUserId: hostClerkId },
+        {
+          $inc: {
+            totalAttendees: 1,
+            ...(isRepeated ? { repeatedAttendees: 1 } : { newAttendees: 1 }),
+          },
+          $set: { updatedAt: new Date() },
+          $setOnInsert: {
+            clerkUserId: hostClerkId,
+            eventsHosted: 0,
+            rating: 0,
+            reviewsCount: 0,
+            thisMonthEarning: 0,
+            overallEarning: 0,
+            createdAt: new Date(),
+          },
+        },
+        { upsert: true }
+      );
+    }
+
+    // ✅ Track earnings if this is a paid event
+    if ((ev as any).kind === "paid" && razorpayPaymentId) {
+      const pricePaise = Number((ev as any).priceCents ?? 0);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const isThisMonth = 
+        (ev as any).startsAt instanceof Date
+          ? (ev as any).startsAt >= startOfMonth
+          : true; // default true for current month events
+
+      await db.collection("user_stats").updateOne(
+        { clerkUserId: hostClerkId },
+        {
+          $inc: {
+            overallEarning: pricePaise,
+            ...(isThisMonth ? { thisMonthEarning: pricePaise } : {}),
+          },
+          $set: { updatedAt: new Date() },
+        },
+        { upsert: true }
+      );
+    }
+
     return NextResponse.json({
       ok:         true,
       status:     "joined",
