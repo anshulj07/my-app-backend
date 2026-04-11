@@ -49,12 +49,85 @@ export async function GET(req: Request, context: Ctx) {
   if (!_id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "myApp");
+  const db = client.db("assis_auth");
 
   const doc = await db.collection("events").findOne({ _id });
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json({ ok: true, event: { ...doc, _id: doc._id.toString() } });
+  // ✅ Auto-enrich attendee/pending images from users collection if missing
+  const attendees = Array.isArray(doc.attendees) ? doc.attendees : [];
+  const pending = Array.isArray(doc.pendingRequests) ? doc.pendingRequests : [];
+
+  const allClerkIds = Array.from(new Set([
+    doc.creatorClerkId,
+    ...attendees.map((a: any) => String(a.clerkId || a.clerkUserId || "")),
+    ...pending.map((p: any) => String(p.clerkUserId || ""))
+  ])).filter(Boolean);
+
+  console.log(`[GET /api/events/${id}] Enrichment: fetching ${allClerkIds.length} users. Creator ID: ${doc.creatorClerkId}`);
+
+  const usersData = await db.collection("users").find(
+    { clerkUserId: { $in: allClerkIds } },
+    { projection: { 
+        clerkUserId: 1, 
+        "profile.firstName": 1, 
+        "profile.lastName": 1, 
+        "profile.avatar": 1, 
+        "profile.photos": 1, 
+        "clerk.firstName": 1, 
+        "clerk.lastName": 1,
+        "clerk.imageUrl": 1
+      } 
+    }
+  ).toArray();
+
+  console.log(`[GET /api/events/${id}] Found ${usersData.length} user docs.`);
+
+  const userMap = new Map(usersData.map(u => {
+    const f = u.profile?.firstName || u.clerk?.firstName || "";
+    const l = u.profile?.lastName || u.clerk?.lastName || "";
+    const name = `${f} ${l}`.trim();
+    
+    const getStr = (val: any) => (typeof val === "string" ? val : val?.url || null);
+    const photo0 = Array.isArray(u.profile?.photos) ? getStr(u.profile.photos[0]) : null;
+    const avatar = getStr(u.profile?.avatar) || u.clerk?.imageUrl || photo0 || "";
+
+    return [
+      u.clerkUserId,
+      { name: name || "User", avatar }
+    ];
+  }));
+
+  const creatorInfo = userMap.get(String(doc.creatorClerkId || ""));
+  if (creatorInfo) {
+    console.log(`[GET /api/events/${id}] Creator enriched: ${creatorInfo.name}`);
+  } else {
+    console.warn(`[GET /api/events/${id}] NO USER DATA FOUND for creator: ${doc.creatorClerkId}`);
+  }
+
+  const enrichedAttendees = attendees.map((a: any) => ({
+    ...a,
+    imageUrl: a.imageUrl || userMap.get(String(a.clerkId || a.clerkUserId || ""))?.avatar || ""
+  }));
+
+  const enrichedPending = pending.map((p: any) => ({
+    ...p,
+    imageUrl: p.imageUrl || userMap.get(String(p.clerkUserId || ""))?.avatar || ""
+  }));
+
+  return NextResponse.json({
+    ok: true,
+    event: {
+      ...doc,
+      _id: doc._id.toString(),
+      creatorName: (doc.creatorName && doc.creatorName !== "Local Host") 
+        ? doc.creatorName 
+        : (creatorInfo?.name || "Local Host"),
+      creatorAvatar: creatorInfo?.avatar || doc.creatorAvatar || "",
+      attendees: enrichedAttendees,
+      pendingRequests: enrichedPending
+    }
+  });
 }
 
 export async function PATCH(req: Request, context: Ctx) {
@@ -77,7 +150,7 @@ export async function PATCH(req: Request, context: Ctx) {
   }
 
   const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "myApp");
+  const db = client.db("assis_auth");
 
   const res = await db.collection("events").findOneAndUpdate(
     { _id },
@@ -101,7 +174,7 @@ export async function DELETE(req: Request, context: Ctx) {
   if (!_id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB || "myApp");
+  const db = client.db("assis_auth");
 
   const res = await db.collection("events").deleteOne({ _id });
   if (res.deletedCount === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });

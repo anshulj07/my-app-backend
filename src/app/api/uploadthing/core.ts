@@ -37,8 +37,11 @@ const photosRoute = () =>
     });
 
 export const ourFileRouter = {
-  // ✅ new slug (what you want)
+  // ✅ profile photos
   profilePhotos: photosRoute(),
+
+  // ✅ event banners
+  bannerImage: photosRoute(),
 
   // ✅ alias slug (what your client is STILL calling)
   imageUploader: photosRoute(),

@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       {
         $set: {
           "profile.photos": photos,
-          "onboarding.step": "done",
+          "onboarding.step": "complete",
           "onboarding.completed": true,
           updatedAt: new Date(),
         },

@@ -30,7 +30,7 @@ export async function PATCH(req: Request) {
     const _id = new ObjectId(idRaw);
 
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB || "myApp");
+    const db = client.db("assis_auth");
     const col = db.collection("events");
 
     const ev = await col.findOne({ _id });

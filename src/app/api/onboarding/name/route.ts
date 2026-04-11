@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
+import { INITIAL_USER_STATS } from "../../../../../lib/userSchema/userStatsSchema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
     const clerkUserId = String(body.clerkUserId || "").trim();
     const firstName = String(body.firstName ?? "").trim();
     const lastName = String(body.lastName ?? "").trim();
+    const email = String(body.email ?? "").trim();
 
     if (!API_KEY || apiKeyHeader !== API_KEY) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,12 +43,14 @@ export async function POST(req: Request) {
           // app profile fields
           "profile.firstName": firstName,
           "profile.lastName": lastName.length ? lastName : null,
+          "profile.email": email.length ? email : null,
         
           // mirror into clerk snapshot in DB
           "clerk.firstName": firstName,
           "clerk.lastName": lastName.length ? lastName : null,
+          "clerk.email": email.length ? email : null,
         
-          "onboarding.step": "dateOfBirth",
+          "onboarding.step": "username",
           "onboarding.completed": false,
           updatedAt: new Date(),
         },
@@ -58,6 +62,19 @@ export async function POST(req: Request) {
         },
       },
       { upsert: true } // ✅ required (since we use $setOnInsert)
+    );
+
+    // Initialize/Update User Stats in separate collection
+    await db.collection("user_stats").updateOne(
+      { clerkUserId },
+      {
+        $setOnInsert: {
+          ...INITIAL_USER_STATS,
+          clerkUserId,
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true }
     );
 
     return NextResponse.json({

@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   }
 
   const client = await clientPromise;
-  const db = client.db();
+  const db = client.db("assis_auth");
   const users = db.collection("users");
 
   const result = await users.updateOne(

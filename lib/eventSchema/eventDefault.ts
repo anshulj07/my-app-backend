@@ -45,8 +45,13 @@ export const EventCreateSchema = z
     kind: z.enum(["free", "paid", "service"]).optional().default("free"),
     priceCents: z.number().int().nullable().optional().default(null),
 
+    // ✅ Who can join: open = direct join, approval = host must approve
+    joinPolicy: z.enum(["open", "approval"]).optional().default("open"),
+
     // ✅ attendance limit (null => open/unlimited). Only allowed for FREE.
     attendance: z.number().int().positive().nullable().optional().default(null),
+    // ✅ Also accept "capacity" as alias (frontend uses this field name)
+    capacity: z.number().int().positive().nullable().optional().default(null),
 
     // who joined (array of clerk user ids)
     // ✅ for create-event, default empty; do NOT allow client to set it
@@ -72,6 +77,9 @@ export const EventCreateSchema = z
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["creatorClerkId"], message: "creatorClerkId is required" });
     }
 
+    // ✅ Merge capacity into attendance if attendance is not set (frontend sends "capacity")
+    const effectiveAttendance = p.attendance ?? p.capacity ?? null;
+
     // paid/service require price; free requires null
     if (p.kind === "paid" || p.kind === "service") {
       if (p.priceCents == null || p.priceCents <= 0) {
@@ -83,7 +91,7 @@ export const EventCreateSchema = z
       }
 
       // ✅ attendance must NOT be set for paid/service
-      if (p.attendance !== null) {
+      if (effectiveAttendance !== null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["attendance"],

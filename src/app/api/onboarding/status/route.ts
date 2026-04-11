@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 type Step =
   | "none"
   | "name"
+  | "username"
   | "dateOfBirth"
   | "gender"
   | "interests"
@@ -16,14 +17,15 @@ type Step =
   | "complete";
 
 const STEP_TO_ROUTE: Record<Step, string> = {
-  none: "/(onboarding)/name",
-  name: "/(onboarding)/name",
+  none:        "/(onboarding)/name",
+  name:        "/(onboarding)/name",
+  username:    "/(onboarding)/username",
   dateOfBirth: "/(onboarding)/dateOfBirth",
-  gender: "/(onboarding)/gender",
-  interests: "/(onboarding)/interests",
-  about: "/(onboarding)/about",
-  photos: "/(onboarding)/photos",
-  complete: "/newApp/home",
+  gender:      "/(onboarding)/gender",
+  interests:   "/(onboarding)/interests",
+  about:       "/(onboarding)/about",
+  photos:      "/(onboarding)/photos",
+  complete:    "/newApp/home",
 };
 
 export async function GET(req: Request) {
@@ -63,6 +65,7 @@ export async function GET(req: Request) {
     const isValidStep = (x: any): x is Step =>
       x === "none" ||
       x === "name" ||
+      x === "username" ||
       x === "dateOfBirth" ||
       x === "gender" ||
       x === "interests" ||
