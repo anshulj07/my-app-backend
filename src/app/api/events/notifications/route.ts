@@ -24,12 +24,18 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    const events = await db.collection("events")
-      .find(
+    // ✅ Fetch from both 'events' and 'services'
+    const [evDocs, svDocs] = await Promise.all([
+      db.collection("events").find(
         { creatorClerkId: clerkUserId, status: { $nin: ["deleted"] } },
         { projection: { title: 1, emoji: 1, attendees: 1, pendingRequests: 1, joinPolicy: 1 } }
-      )
-      .toArray();
+      ).toArray(),
+      db.collection("services").find(
+        { creatorClerkId: clerkUserId, status: { $nin: ["deleted"] } },
+        { projection: { title: 1, emoji: 1, attendees: 1, pendingRequests: 1, joinPolicy: 1 } }
+      ).toArray()
+    ]);
+    const events = [...evDocs, ...svDocs];
 
     type NotifItem = {
       id: string;
@@ -54,31 +60,33 @@ export async function GET(req: Request) {
 
       // Recent joins (last 30 per event) - confirmed attendees
       for (const a of ((ev as any).attendees || []).slice(-30)) {
+        const timestamp = a.joinedAt ? new Date(a.joinedAt).toISOString() : new Date().toISOString();
         items.push({
-          id: `join-${eventId}-${a.clerkId}`,
+          id: `join-${eventId}-${a.clerkId}-${timestamp}`,
           type: "joined",
           eventId, eventTitle, eventEmoji,
           userName: String(a.name || "Someone"),
           userClerkId: String(a.clerkId || ""),
           userImageUrl: String(a.imageUrl || ""),
           message: String(a.message || ""),
-          timestamp: a.joinedAt ? new Date(a.joinedAt).toISOString() : new Date().toISOString(),
-          paid: !!a.razorpayPaymentId, // If payment ID exists, it's paid
+          timestamp,
+          paid: !!a.razorpayPaymentId,
         });
       }
 
       // Pending approval requests - not yet attendees
       for (const p of ((ev as any).pendingRequests || [])) {
+        const timestamp = p.requestedAt ? new Date(p.requestedAt).toISOString() : new Date().toISOString();
         items.push({
-          id: `pending-${eventId}-${p.clerkUserId}`,
+          id: `pending-${eventId}-${p.clerkUserId}-${timestamp}`,
           type: "pending",
           eventId, eventTitle, eventEmoji,
           userName: String(p.name || "Someone"),
           userClerkId: String(p.clerkUserId || ""),
           userImageUrl: String(p.imageUrl || ""),
           message: String(p.message || ""),
-          timestamp: p.requestedAt ? new Date(p.requestedAt).toISOString() : new Date().toISOString(),
-          paid: !!p.paid, // ✅ reflecting the new 'paid' flag from verify-payment
+          timestamp,
+          paid: !!p.paid,
         });
       }
     }

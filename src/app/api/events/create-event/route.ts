@@ -215,7 +215,7 @@
 // app/api/events/create-event/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
-import { EventCreateSchema, buildStartsAt } from "../../../../../lib/eventSchema/eventDefault";
+import { EventCreateSchema, buildStartsAt, buildEndsAt } from "../../../../../lib/eventSchema/eventDefault";
 import { INITIAL_USER_STATS } from "../../../../../lib/userSchema/userStatsSchema";
 
 export const runtime = "nodejs";
@@ -255,6 +255,7 @@ export async function POST(req: Request) {
 
     // ── Build document ────────────────────────────────────────────────────────
     const startsAt = buildStartsAt(data);
+    const endsAt   = buildEndsAt(data);
 
     // Accept capacity from either field name (frontend sends "capacity")
     const effectiveCapacity = data.attendance ?? data.capacity ?? null;
@@ -274,6 +275,8 @@ export async function POST(req: Request) {
       pendingRequests:[],
       date:           data.date ?? "",
       time:           data.time ?? "",
+      endDate:        data.endDate ?? "",
+      endTime:        data.endTime ?? "",
       timezone:       data.timezone ?? "",
       tags:           data.tags ?? [],
       visibility:     data.visibility ?? "public",
@@ -296,12 +299,15 @@ export async function POST(req: Request) {
     }
 
     if (startsAt) doc.startsAt = startsAt;
+    if (endsAt)   doc.endsAt   = endsAt;
 
-    // ── Insert event ──────────────────────────────────────────────────────────
+    // ── Insert document into correct collection ─────────────────────────────
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    const result = await db.collection("events").insertOne(doc);
+    // ✅ Split collection logic: 'services' for kind service, else 'events'
+    const targetCollection = doc.kind === "service" ? "services" : "events";
+    const result = await db.collection(targetCollection).insertOne(doc);
     const eventId = result.insertedId.toString();
 
     // ── Update user_stats: increment eventsHosted ─────────────────────────────

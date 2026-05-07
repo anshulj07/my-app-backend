@@ -54,10 +54,74 @@ export async function POST(req: Request) {
       $set: { updatedAt: new Date() },
     };
 
+    let targetBookingId: string | null = null;
+
     if (isAttendee) {
+      const attendee = attendees.find((a: any) => String(a.clerkId || a.clerkUserId || "") === clerkUserId);
+      targetBookingId = attendee?.bookingId || null;
       update.$pull = { attendees: { clerkId: clerkUserId } };
     } else if (isPending) {
+      const pendingReq = pending.find((p: any) => String(p.clerkUserId || "") === clerkUserId);
+      targetBookingId = pendingReq?.bookingId || null;
       update.$pull = { pendingRequests: { clerkUserId: clerkUserId } };
+    }
+
+    // ── REFUND LOGIC ─────────────────────────────────────────────────────────
+    if (targetBookingId) {
+      const booking = await db.collection("bookings").findOne({ _id: new ObjectId(targetBookingId) });
+      if (booking && booking.razorpayPaymentId && booking.status !== "refunded") {
+        
+        // 24-hour Policy Check
+        const startsAt = ev.startsAt ? new Date(ev.startsAt) : null;
+        const now = new Date();
+        const canRefund = !startsAt || (startsAt.getTime() - now.getTime() > 24 * 60 * 60 * 1000);
+
+        if (canRefund) {
+          const KEY_ID = process.env.RAZORPAY_KEY_ID;
+          const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+          
+          if (KEY_ID && KEY_SECRET) {
+            const Razorpay = require("razorpay");
+            const razorpay = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
+            try {
+              const refund = await razorpay.payments.refund(booking.razorpayPaymentId, {
+                notes: { reason: "User cancelled join request / left event", eventId, bookingId: targetBookingId }
+              });
+              
+              await db.collection("bookings").updateOne(
+                { _id: new ObjectId(targetBookingId) },
+                { 
+                  $set: { 
+                    status: "cancelled_refunded", 
+                    razorpayRefundId: refund.id,
+                    refundedAt: new Date(),
+                    updatedAt: new Date()
+                  } 
+                }
+              );
+              console.log(`[Refund] User ${clerkUserId} refunded for booking ${targetBookingId}`);
+            } catch (err: any) {
+              console.error("[Refund Error]", err);
+              await db.collection("bookings").updateOne(
+                { _id: new ObjectId(targetBookingId) },
+                { $set: { status: "cancelled_refund_failed", refundError: err.message, updatedAt: new Date() } }
+              );
+            }
+          }
+        } else {
+          // No refund (less than 24h)
+          await db.collection("bookings").updateOne(
+            { _id: new ObjectId(targetBookingId) },
+            { $set: { status: "cancelled_no_refund", updatedAt: new Date() } }
+          );
+        }
+      } else if (booking) {
+        // Free booking
+        await db.collection("bookings").updateOne(
+          { _id: new ObjectId(targetBookingId) },
+          { $set: { status: "cancelled", updatedAt: new Date() } }
+        );
+      }
     }
 
     // Add to leave log if it's a confirmed attendee leaving
@@ -78,6 +142,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
+    console.error("[POST /api/events/leave] Error:", e);
     return NextResponse.json({ error: "Server error", detail: e?.message ?? "" }, { status: 500 });
   }
 }

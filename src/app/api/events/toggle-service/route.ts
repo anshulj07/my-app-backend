@@ -31,31 +31,42 @@ export async function PATCH(req: Request) {
 
     const client = await clientPromise;
     const db = client.db("assis_auth");
-    const col = db.collection("events");
+    
+    // ✅ Search in both 'events' and 'services'
+    let col = db.collection("events");
+    let ev = await col.findOne({ _id });
+    
+    if (!ev) {
+      col = db.collection("services");
+      ev = await col.findOne({ _id });
+    }
 
-    const ev = await col.findOne({ _id });
     if (!ev) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
     if (String(ev.creatorClerkId) !== actorClerkId) {
       return NextResponse.json({ error: "Forbidden: not creator" }, { status: 403 });
     }
 
-    if (String(ev.kind) !== "service") {
-      return NextResponse.json({ error: "Only service listings can be toggled" }, { status: 400 });
-    }
-
     const nextStatus = enabled ? "active" : "paused";
 
+    // In MongoDB Driver v6, findOneAndUpdate returns the document directly
     const upd = await col.findOneAndUpdate(
       { _id },
       { $set: { status: nextStatus, updatedAt: new Date() } },
       { returnDocument: "after" }
     );
 
+    if (!upd) {
+      return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+    }
+
+    // Handle both old (with .value) and new (direct) driver return shapes
+    const updatedDoc = (upd as any).value || upd;
+
     return NextResponse.json({
       ok: true,
-      status: upd?.value?.status,
-      event: { ...upd?.value, _id: upd?.value?._id?.toString() },
+      status: updatedDoc.status,
+      event: { ...updatedDoc, _id: updatedDoc._id.toString() },
     });
   } catch (e: any) {
     return NextResponse.json({ error: "Server error", detail: e?.message ?? "" }, { status: 500 });

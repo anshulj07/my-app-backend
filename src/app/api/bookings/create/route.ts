@@ -42,6 +42,8 @@ export async function POST(req: Request) {
       bookerEmail,
       bookerPhone,
       bookerImageUrl,
+      startTime,       // "HH:mm"
+      duration,        // number of hours
     } = body;
 
     // ── Validate ─────────────────────────────────────────────────────────────
@@ -85,7 +87,14 @@ export async function POST(req: Request) {
       if (!/^[a-fA-F0-9]{24}$/.test(eventId)) {
         return NextResponse.json({ error: "Invalid eventId" }, { status: 400 });
       }
-      eventDoc = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
+      const _id = new ObjectId(eventId);
+      
+      // ✅ Try 'events' collection first, then 'services'
+      eventDoc = await db.collection("events").findOne({ _id });
+      if (!eventDoc) {
+        eventDoc = await db.collection("services").findOne({ _id });
+      }
+
       if (!eventDoc) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
       // Use event's priceCents as pricePerDay if not explicitly passed
@@ -107,7 +116,7 @@ export async function POST(req: Request) {
         bookerId,
         eventId,
         type: "event",
-        status: { $in: ["confirmed", "payment_pending"] },
+        status: "confirmed", // 👈 Only block if it's already confirmed
       });
 
       if (existingBooking) {
@@ -117,13 +126,12 @@ export async function POST(req: Request) {
         );
       }
 
-      // 2. Check events collection attendees list (safety check)
-      const evAttendee = await db.collection("events").findOne({
-        _id: new ObjectId(eventId),
-        "attendees.clerkId": bookerId,
-      });
+      // 2. Check both collections for attendees list (safety check)
+      const attendeeQuery = { _id: new ObjectId(eventId), "attendees.clerkId": bookerId };
+      const inEvents = await db.collection("events").findOne(attendeeQuery);
+      const inServices = await db.collection("services").findOne(attendeeQuery);
 
-      if (evAttendee) {
+      if (inEvents || inServices) {
         return NextResponse.json(
           { error: "You are already an attendee of this event" },
           { status: 409 }
@@ -133,10 +141,37 @@ export async function POST(req: Request) {
 
     // ── Check host availability (only for person/service bookings, NOT events) ─
     // Events allow multiple attendees — skip conflict check for event type
-    if (type !== "event") {
+    // ── Check host availability ─────────────────────────────────────────────
+    if (type === "service" && eventId && startTime) {
+       // Granular check for services
+       const requestedStart = parseInt(startTime.split(":")[0]);
+       const requestedEnd = requestedStart + (duration || 1);
+
+       const conflicting = await db.collection("bookings").findOne({
+         eventId,
+         status: { $in: ["confirmed", "pending", "payment_pending"] },
+         startDate, // same day
+         $or: [
+           // Overlap logic: (StartA < EndB) && (EndA > StartB)
+           {
+             $expr: {
+               $and: [
+                 { $lt: [ { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0] } }, requestedEnd ] },
+                 { $gt: [ { $add: [ { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0] } }, { $ifNull: ["$duration", 1] } ] }, requestedStart ] }
+               ]
+             }
+           }
+         ]
+       } as any);
+
+       if (conflicting) {
+         return NextResponse.json({ error: "This time slot is already booked." }, { status: 409 });
+       }
+    } else if (type === "person") {
+      // Whole day check for person bookings
       const conflicting = await db.collection("bookings").findOne({
         hostId,
-        status: { $in: ["confirmed", "pending"] },
+        status: { $in: ["confirmed", "pending", "payment_pending"] },
         $or: [
           { startDate: { $lte: endDate }, endDate: { $gte: startDate } },
         ],
@@ -195,6 +230,8 @@ export async function POST(req: Request) {
         phone: bProf?.phone || bookerPhone || "",
         imageUrl: realBookerImageUrl, // ✅ Real Pic
       },
+      startTime: startTime || null,
+      duration: duration || null,
       checkInOtp: null,           // set after payment confirmed
       razorpayOrderId: null,
       razorpayPaymentId: null,
@@ -206,21 +243,29 @@ export async function POST(req: Request) {
     const result = await db.collection("bookings").insertOne(bookingDoc);
     const bookingId = result.insertedId.toString();
 
-    // ── Sync with events collection (so it shows in 'Going' tab as pending) ──
+    // ── Sync with correct collection (so it shows in 'Going' tab as pending) ──
     if (type === "event" && eventId) {
-      await db.collection("events").updateOne(
+      const parentCol = eventDoc.kind === "service" ? "services" : "events";
+      
+      // ✅ Prevent duplicate entries for the same user in pendingRequests
+      await db.collection(parentCol).updateOne(
+        { _id: new ObjectId(eventId) },
+        { $pull: { pendingRequests: { clerkUserId: bookerId } } as any }
+      );
+
+      await db.collection(parentCol).updateOne(
         { _id: new ObjectId(eventId) },
         {
-          $addToSet: {
+          $push: {
             pendingRequests: {
               clerkUserId: bookerId,
-              name: realBookerName,     // ✅ Real Name
+              name: realBookerName,
               email: bookerDoc?.email || bookerEmail || "",
               phone: bProf?.phone || bookerPhone || "",
               message: (notes || "").trim(),
-              imageUrl: realBookerImageUrl, // ✅ Real Pic
+              imageUrl: realBookerImageUrl,
               requestedAt: new Date(),
-              bookingId: bookingId, // link back
+              bookingId: bookingId,
             }
           } as any,
           $set: { updatedAt: new Date() },
@@ -252,22 +297,10 @@ export async function POST(req: Request) {
     const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
     if (!KEY_ID || !KEY_SECRET) {
-      // Payment not configured - confirm anyway (dev mode)
-      const otp = String(Math.floor(1000 + Math.random() * 9000));
-      await db.collection("bookings").updateOne(
-        { _id: result.insertedId },
-        { $set: { checkInOtp: otp, status: "confirmed" } }
-      );
-      return NextResponse.json({
-        ok: true,
-        bookingId,
-        status: "confirmed",
-        checkInOtp: otp,
-        days,
-        totalPrice,
-        requiresPayment: false,
-        devNote: "Payment gateway not configured",
-      });
+      console.error("[CRITICAL] Razorpay keys missing in environment!");
+      return NextResponse.json({ 
+        error: "Payment gateway is not configured on server. Contact admin." 
+      }, { status: 500 });
     }
 
     const razorpay = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });

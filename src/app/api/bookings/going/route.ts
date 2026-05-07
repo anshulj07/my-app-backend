@@ -172,72 +172,63 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Events where user is a confirmed attendee (in events collection)
+    // ✅ Step 1: Get ALL relevant bookings for this user to determine status
+    const allBookings = await db.collection("bookings")
+      .find({ bookerId: clerkUserId, type: { $in: ["event", "service"] } })
+      .toArray();
+
+    // ✅ Step 2: Get events where user is a confirmed attendee (in events collection)
     const joinedDocs = await db.collection("events")
       .find({ "attendees.clerkId": clerkUserId })
       .sort({ startsAt: 1, createdAt: -1 })
       .toArray();
 
-    // ✅ Fallback: Events where user has a CONFIRMED booking in the bookings collection
-    // This handles cases where the event document was not updated correctly
-    const explicitBookings = await db.collection("bookings")
-      .find({ bookerId: clerkUserId, status: "confirmed", type: "event" })
-      .toArray();
+    // ✅ Step 3: Find other events/services where user has a non-pending booking
+    const relevantBookingIds = allBookings
+      .filter(b => ["confirmed", "paid_pending_approval", "pending_approval"].includes(b.status))
+      .map(b => b.eventId)
+      .filter(Boolean);
     
-    const bookedEventIds = explicitBookings.map(b => b.eventId).filter(Boolean);
     let extraJoinedDocs: any[] = [];
-    if (bookedEventIds.length > 0) {
+    if (relevantBookingIds.length > 0) {
       const alreadyFoundIds = new Set(joinedDocs.map(d => d._id.toString()));
-      const missingIds = bookedEventIds
-        .filter(id => !alreadyFoundIds.has(id))
-        .map(id => { try { return new ObjectId(id); } catch { return null; } })
+      const missingIds = relevantBookingIds
+        .filter(id => !alreadyFoundIds.has(String(id)))
+        .map(id => { try { return new ObjectId(String(id)); } catch { return null; } })
         .filter(Boolean);
       
       if (missingIds.length > 0) {
-        extraJoinedDocs = await db.collection("events")
-          .find({ _id: { $in: missingIds } } as any)
-          .toArray();
+        const [extraEvents, extraServices] = await Promise.all([
+          db.collection("events").find({ _id: { $in: missingIds } } as any).toArray(),
+          db.collection("services").find({ _id: { $in: missingIds } } as any).toArray(),
+        ]);
+        extraJoinedDocs = [...extraEvents, ...extraServices];
       }
     }
 
-    // Combine all joined documents
+    // Combine all "joined" or "in-progress" documents
     const allJoinedDocs = [...joinedDocs, ...extraJoinedDocs];
-
-    // ✅ Events where user has a PENDING approval request
-    const pendingDocs = await db.collection("events")
-      .find({ "pendingRequests.clerkUserId": clerkUserId })
-      .sort({ startsAt: 1, createdAt: -1 })
-      .toArray();
-
-    // Map joined events
     const joinedIds = new Set();
+    
     const joinedEvents = allJoinedDocs.map((e: any) => {
       joinedIds.add(e._id.toString());
       
-      // Find the specific attendee record for this user
       const myEntry = Array.isArray(e.attendees)
         ? e.attendees.find((a: any) => String(a.clerkId) === String(clerkUserId))
         : null;
 
-      // Find the specific booking for this user to check detailed status
-      const myBooking = explicitBookings.find(b => String(b.eventId) === e._id.toString());
+      const myBooking = allBookings.find(b => String(b.eventId) === e._id.toString());
 
-      /**
-       * ── STATUS CLASSIFICATION ──
-       * If they are in the attendees list, they are definitely JOINED.
-       * If they are NOT in attendees but have a booking that is 'confirmed', they are also JOINED.
-       * If they have a booking that is 'paid_pending_approval', they are still PENDING.
-       */
-      const isActuallyJoined = !!myEntry || (myBooking?.status === "confirmed");
-      const currentStatus = isActuallyJoined ? "joined" : "pending";
+      // Status logic: use booking status if available, fallback to confirmed if in attendees
+      const status = myBooking?.status || (myEntry ? "confirmed" : "pending_approval");
 
       return {
         ...e,
         _id: e._id.toString(),
         myCheckInOtp: myEntry?.checkInOtp || myBooking?.checkInOtp || null,
         myCheckedIn: !!myEntry?.checkedIn,
-        myJoinStatus: currentStatus, // Correctly reflecting approval status
-        isPaid: !!myBooking?.razorpayPaymentId,
+        myJoinStatus: status,
+        isPaid: !!myBooking?.razorpayPaymentId || !!myEntry?.razorpayPaymentId,
         attendees: Array.isArray(e.attendees)
           ? e.attendees.map((a: any) => ({
               clerkId: a.clerkId,
@@ -250,14 +241,25 @@ export async function GET(req: Request) {
       };
     });
 
+    // ✅ Step 4: Handle legacy pending requests (ensure they aren't unpaid)
+    const pendingDocs = await db.collection("events")
+      .find({ "pendingRequests.clerkUserId": clerkUserId })
+      .sort({ startsAt: 1, createdAt: -1 })
+      .toArray();
+
     const pendingEvents = pendingDocs
-      .filter((e: any) => !joinedIds.has(e._id.toString())) // no duplicates
+      .filter((e: any) => !joinedIds.has(e._id.toString()))
+      .filter((e: any) => {
+        // ONLY include if there's NO payment_pending booking for this event
+        const myBooking = allBookings.find(b => String(b.eventId) === e._id.toString());
+        return !myBooking || myBooking.status !== "payment_pending";
+      })
       .map((e: any) => ({
         ...e,
         _id: e._id.toString(),
         myCheckInOtp: null,
         myCheckedIn: false,
-        myJoinStatus: "pending", 
+        myJoinStatus: "pending_approval", 
         attendees: [],
         pendingRequests: undefined,
       }));

@@ -65,11 +65,16 @@ export const EventCreateSchema = z
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
     time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).default(""),
 
+    // ✅ End Date & Time
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).default(""),
+
     timezone: z.string().max(60).optional().default(""),
     location: LocationSchema,
 
     tags: z.array(z.string().max(40)).optional().default([]),
     visibility: z.enum(["public", "private"]).optional().default("public"),
+    bannerUri: z.string().url().optional().or(z.literal("")).default(""),
   })
   .superRefine((p, ctx) => {
     const creator = (p.creatorClerkId || p.clerkUserId || "").trim();
@@ -115,9 +120,18 @@ export type EventCreateInput = z.infer<typeof EventCreateSchema>;
 export function buildStartsAt(payload: EventCreateInput) {
   if (payload.startsAt) return new Date(payload.startsAt);
 
-  // Best-effort UTC Date when date/time provided
+  // Fallback to construction from date/time strings
   if (payload.date && payload.time) {
-    const d = new Date(`${payload.date}T${payload.time}:00Z`);
+    const d = new Date(`${payload.date}T${payload.time}:00`);
+    return Number.isFinite(d.getTime()) ? d : null;
+  }
+  return null;
+}
+
+export function buildEndsAt(payload: any) {
+  if (payload.endsAt) return new Date(payload.endsAt);
+  if (payload.endDate && payload.endTime) {
+    const d = new Date(`${payload.endDate}T${payload.endTime}:00`);
     return Number.isFinite(d.getTime()) ? d : null;
   }
   return null;

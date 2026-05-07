@@ -51,7 +51,12 @@ export async function GET(req: Request, context: Ctx) {
   const client = await clientPromise;
   const db = client.db("assis_auth");
 
-  const doc = await db.collection("events").findOne({ _id });
+  // ✅ Try finding in 'events' first, then 'services'
+  let doc = await db.collection("events").findOne({ _id });
+  if (!doc) {
+    doc = await db.collection("services").findOne({ _id });
+  }
+
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // ✅ Auto-enrich attendee/pending images from users collection if missing

@@ -186,9 +186,15 @@ export async function GET(req: Request) {
     const kind = (searchParams.get("kind") || "").trim();
 
     const client = await clientPromise;
-    // ✅ FIXED: was "myApp" — now consistent with rest of app
     const db = client.db("assis_auth");
-    const col = db.collection("events");
+    
+    // ✅ Decide which collections to query based on 'kind'
+    // If kind is 'service', we only look in services.
+    // If kind is 'free'|'paid', we only look in events.
+    // If kind is missing/empty, we look in both for the map.
+    const collectionsToQuery = [];
+    if (!kind || kind === "service") collectionsToQuery.push(db.collection("services"));
+    if (!kind || kind === "free" || kind === "paid") collectionsToQuery.push(db.collection("events"));
 
     const query: any = {};
 
@@ -204,15 +210,20 @@ export async function GET(req: Request) {
     // ✅ Always exclude ended/deleted events
     query.status = { $nin: ["ended", "completed", "deleted"] };
 
-    // ✅ Smart expiry: hide events that have passed (with 24h grace for ongoing)
+    // ✅ Smart expiry: hide events that have passed (immediate disappearance on end)
+    const now = new Date();
     if (upcomingOnly) {
-      query.startsAt = { $gte: new Date() };
+      query.startsAt = { $gte: now };
     } else {
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
       query.$or = [
-        { startsAt: { $exists: false } },
-        { startsAt: null },
-        { startsAt: { $gte: cutoff } },
+        { endsAt: { $gte: now } }, // Priority 1: Hasn't ended yet
+        { 
+          endsAt: { $exists: false }, 
+          $or: [
+            { startsAt: { $gte: new Date(Date.now() - 3 * 60 * 60 * 1000) } }, // Fallback: 3h grace if no endsAt
+            { startsAt: { $exists: false } } // Fallback: Keep if no time set
+          ]
+        },
       ];
     }
 
@@ -243,27 +254,50 @@ export async function GET(req: Request) {
       }
     }
 
-    const docs = await col
-      .find(query)
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(limit)
-      .toArray();
+    // ✅ Fetch from all relevant collections in parallel
+    const results = await Promise.all(
+      collectionsToQuery.map(col => 
+        col.find(query)
+           .sort({ createdAt: -1, _id: -1 })
+           .limit(limit)
+           .toArray()
+      )
+    );
+
+    // ✅ Merge and re-sort
+    const docs = results.flat()
+      .sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, limit);
 
     // ✅ Post-fetch: filter events using date+time string fields (fallback for old docs)
-    const now = Date.now();
+    const nowTs = Date.now();
     const filteredDocs = docs.filter((e: any) => {
-      // If startsAt exists, DB already handled it above
-      if (e.startsAt) return true;
+      // Priority 1: Use endsAt/startsAt if they exist (already handled by DB, but good to double check)
+      if (e.endsAt) return new Date(e.endsAt).getTime() >= nowTs;
+      if (e.startsAt) return new Date(e.startsAt).getTime() >= nowTs - 3 * 60 * 60 * 1000;
+
       // Fallback: parse date+time string
       const date = String(e.date || "").trim();
       const time = String(e.time || "").trim();
-      if (!date) return true; // no date = keep (creator may not have set it)
-      const ms = date && time
-        ? new Date(`${date}T${time}:00Z`).getTime()
-        : new Date(`${date}T12:00:00Z`).getTime();
-      if (!Number.isFinite(ms)) return true;
-      // 24h grace period
-      return ms >= now - 24 * 60 * 60 * 1000;
+      const endTime = String(e.endTime || "").trim();
+
+      if (!date) return true; // no date = keep
+
+      let endMs = 0;
+      if (endTime) {
+        endMs = new Date(`${date}T${endTime}:00Z`).getTime();
+      } else if (time) {
+        endMs = new Date(`${date}T${time}:00Z`).getTime() + 3 * 60 * 60 * 1000; // 3h default
+      } else {
+        endMs = new Date(`${date}T23:59:59Z`).getTime();
+      }
+
+      if (!Number.isFinite(endMs)) return true;
+      return endMs >= nowTs;
     });
 
     // ✅ Return all fields needed by map pins + sheets

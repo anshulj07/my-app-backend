@@ -8,17 +8,25 @@ export async function updateHostStats(clerkUserId: string) {
   const client = await clientPromise;
   const db = client.db("assis_auth");
 
-  // 1. Events Hosted
-  const eventsHosted = await db.collection("events").countDocuments({
-    creatorClerkId: clerkUserId,
-    status: { $ne: "deleted" },
-  });
+  // 1. Events + Services Hosted (Total Count)
+  const [eventsCount, servicesCount] = await Promise.all([
+    db.collection("events").countDocuments({ creatorClerkId: clerkUserId, status: { $ne: "deleted" } }),
+    db.collection("services").countDocuments({ creatorClerkId: clerkUserId, status: { $ne: "deleted" } })
+  ]);
+  const eventsHosted = eventsCount + servicesCount;
 
-  // 2. All hosted events (to compute attendees + earnings)
-  const hostedEvents = await db.collection("events").find(
-    { creatorClerkId: clerkUserId, status: { $ne: "deleted" } },
-    { projection: { attendees: 1, priceCents: 1, kind: 1, startsAt: 1 } }
-  ).toArray();
+  // 2. All hosted items (to compute attendees + earnings)
+  const results = await Promise.all([
+    db.collection("events").find(
+      { creatorClerkId: clerkUserId, status: { $ne: "deleted" } },
+      { projection: { attendees: 1, priceCents: 1, kind: 1, startsAt: 1 } }
+    ).toArray(),
+    db.collection("services").find(
+      { creatorClerkId: clerkUserId, status: { $ne: "deleted" } },
+      { projection: { attendees: 1, priceCents: 1, kind: 1, startsAt: 1 } }
+    ).toArray()
+  ]);
+  const hostedEvents = results.flat();
 
   // 3. Attendees: total, repeated, new
   const attendeesSeen = new Map<string, number>();
@@ -66,9 +74,9 @@ export async function updateHostStats(clerkUserId: string) {
     }
   }
 
-  // 5. Services
-  const serviceEvents = await db.collection("events").find(
-    { creatorClerkId: clerkUserId, kind: "service", status: { $ne: "deleted" } },
+  // 5. Services (specifically from services collection)
+  const serviceEvents = await db.collection("services").find(
+    { creatorClerkId: clerkUserId, status: { $ne: "deleted" } },
     { projection: { title: 1, emoji: 1 } }
   ).limit(10).toArray();
   const services = serviceEvents.map((e: any) => `${e.emoji || ""} ${e.title || ""}`.trim());
