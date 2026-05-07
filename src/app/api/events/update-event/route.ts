@@ -358,6 +358,8 @@ const PatchFieldsSchema = z
     // ✅ Compat
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).optional(),
     time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).optional(),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).optional(),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")).optional(),
 
     timezone: z.string().max(60).optional(),
 
@@ -365,8 +367,17 @@ const PatchFieldsSchema = z
 
     tags: z.array(z.string().max(40)).optional(),
     visibility: z.enum(["public", "private"]).optional(),
-    status: z.enum(["active", "cancelled"]).optional(),
-    joinPolicy: z.enum(["open", "approval"]).optional(), // ✅ Who can join
+    status: z.enum(["active", "cancelled", "paused"]).optional(),
+    joinPolicy: z.enum(["open", "approval"]).optional(),
+    rateType: z.enum(["hour", "day"]).optional(),
+    serviceMetadata: z.object({
+      minDuration: z.string().optional(),
+      schedule: z.array(z.any()).optional(),
+      blockedDates: z.array(z.string()).optional(),
+      meetupStyle: z.string().optional(),
+    }).optional(),
+    // ✅ Banner / cover photo URL (allow empty string or full URL)
+    bannerUri: z.union([z.string().url(), z.literal("")]).optional(),
   })
   .partial();
 
@@ -432,6 +443,8 @@ export async function PATCH(req: Request) {
 
     const date = u.date ?? payload.date;
     const time = u.time ?? payload.time;
+    const endDate = u.endDate ?? payload.endDate;
+    const endTime = u.endTime ?? payload.endTime;
     const timezone = u.timezone ?? payload.timezone;
 
     const startsAtStr = u.startsAt ?? payload.startsAt;
@@ -440,6 +453,9 @@ export async function PATCH(req: Request) {
     const tags = u.tags ?? payload.tags;
     const visibility = u.visibility ?? payload.visibility;
     const status = u.status ?? payload.status;
+    const rateType = u.rateType ?? payload.rateType;
+    const serviceMetadata = u.serviceMetadata ?? payload.serviceMetadata;
+    const bannerUri = u.bannerUri ?? (payload as any).bannerUri;
 
     const creator = (payload.creatorClerkId || payload.clerkUserId || "").trim();
     if (!creator) {
@@ -449,6 +465,8 @@ export async function PATCH(req: Request) {
     // ✅ validate _id early
     const _oid = ObjectId.isValid(payload._id) ? new ObjectId(payload._id) : null;
     if (!_oid) return NextResponse.json({ error: "Invalid event id (_id)" }, { status: 400 });
+
+    const findQuery = { _id: _oid, creatorClerkId: creator };
 
     // ✅ kind/price rules
     // Paid kinds require valid price
@@ -482,6 +500,8 @@ export async function PATCH(req: Request) {
 
     if (typeof date !== "undefined") $set.date = date ?? "";
     if (typeof time !== "undefined") $set.time = time ?? "";
+    if (typeof endDate !== "undefined") $set.endDate = endDate ?? "";
+    if (typeof endTime !== "undefined") $set.endTime = endTime ?? "";
 
     // ✅ startsAt handling:
     // - if startsAt provided: trust it
@@ -517,11 +537,42 @@ export async function PATCH(req: Request) {
       }
     }
 
+    // ✅ endsAt handling:
+    const endsAtStr = (payload as any).endsAt;
+    if (typeof endsAtStr !== "undefined") {
+      const d = endsAtStr ? new Date(endsAtStr) : null;
+      if (d && isFinite(d.getTime())) $set.endsAt = d;
+    } else {
+      const endDateTouched = typeof (u.endDate ?? payload.endDate) !== "undefined";
+      const endTimeTouched = typeof (u.endTime ?? payload.endTime) !== "undefined";
+      if (endDateTouched || endTimeTouched) {
+        // We'll need existing data to compute if only one field touched
+        const client = await clientPromise;
+        const db = client.db("assis_auth");
+        let existing = await db.collection("events").findOne(findQuery, { projection: { endDate: 1, endTime: 1 } });
+        if (!existing) existing = await db.collection("services").findOne(findQuery, { projection: { endDate: 1, endTime: 1 } });
+
+        if (existing) {
+          const nextEndDate = typeof endDate !== "undefined" ? (endDate ?? "") : (existing as any).endDate ?? "";
+          const nextEndTime = typeof endTime !== "undefined" ? (endTime ?? "") : (existing as any).endTime ?? "";
+          if (nextEndDate && nextEndTime) {
+            const d = new Date(`${nextEndDate}T${nextEndTime}:00Z`);
+            if (isFinite(d.getTime())) $set.endsAt = d;
+          }
+        }
+      }
+    }
+
     if (typeof tags !== "undefined") $set.tags = tags ?? [];
     if (typeof visibility !== "undefined") $set.visibility = visibility ?? "public";
     if (typeof status !== "undefined") $set.status = status ?? "active";
     const joinPolicy = u.joinPolicy ?? payload.joinPolicy;
     if (typeof joinPolicy !== "undefined") $set.joinPolicy = joinPolicy ?? "open";
+
+    if (typeof rateType !== "undefined") $set.rateType = rateType;
+    if (typeof serviceMetadata !== "undefined") $set.serviceMetadata = serviceMetadata;
+    // ✅ Save banner/cover photo URL
+    if (typeof bannerUri !== "undefined") $set.bannerUri = bannerUri ?? "";
 
     if (typeof location !== "undefined") {
       if (!location) {
@@ -538,7 +589,7 @@ export async function PATCH(req: Request) {
       $set.location = {
         ...loc,
         cityKey,
-        countryCode: loc.countryCode.toUpperCase(),
+        countryCode: (loc.countryCode || "IN").toUpperCase(),
         geo: { type: "Point", coordinates: [loc.lng, loc.lat] },
       };
     }
@@ -552,16 +603,21 @@ export async function PATCH(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ only creator can update
-    const findQuery = { _id: _oid, creatorClerkId: creator };
+    // ✅ Identify the correct collection: search both 'events' and 'services'
+    let col = db.collection("events");
+    let target = await col.findOne(findQuery);
+    if (!target) {
+      col = db.collection("services");
+      target = await col.findOne(findQuery);
+    }
 
-    const upd = await db.collection("events").updateOne(findQuery, { $set });
-
-    if (upd.matchedCount === 0) {
+    if (!target) {
       return NextResponse.json({ error: "Event not found or you are not the creator" }, { status: 404 });
     }
 
-    const updated = await db.collection("events").findOne(findQuery);
+    const upd = await col.updateOne(findQuery, { $set });
+
+    const updated = await col.findOne(findQuery);
 
     return NextResponse.json(
       { ok: true, event: updated ? { ...updated, _id: (updated as any)._id.toString() } : null },

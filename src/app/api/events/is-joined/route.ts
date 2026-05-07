@@ -127,9 +127,23 @@ export async function GET(req: Request) {
     }
 
     // Check pendingRequests (approval events)
-    const isPending = ((ev as any).pendingRequests || []).some(
+    const isPendingInEvent = ((ev as any).pendingRequests || []).some(
       (p: any) => String(p.clerkUserId || "") === clerkUserId
     );
+
+    let isPending = isPendingInEvent;
+
+    // ✅ NEW: Verify if there's a payment_pending booking. 
+    // If so, we are NOT 'pending' in terms of approval flow (we are unpaid).
+    const unpaidBooking = await db.collection("bookings").findOne({
+      bookerId: clerkUserId,
+      eventId: eventId,
+      status: "payment_pending"
+    });
+
+    if (unpaidBooking) {
+      isPending = false;
+    }
 
     return NextResponse.json({
       ok: true,
