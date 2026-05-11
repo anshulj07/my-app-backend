@@ -208,24 +208,27 @@ export async function GET(req: Request) {
     if (kind === "free" || kind === "paid" || kind === "service") query.kind = kind;
 
     // ✅ Always exclude ended/deleted events
-    query.status = { $nin: ["ended", "completed", "deleted"] };
-
-    // ✅ Smart expiry: hide events that have passed (immediate disappearance on end)
+    // ✅ Smart expiry: hide events that have passed (combined with $and to avoid conflict)
     const now = new Date();
-    if (upcomingOnly) {
-      query.startsAt = { $gte: now };
-    } else {
-      query.$or = [
-        { endsAt: { $gte: now } }, // Priority 1: Hasn't ended yet
-        { 
-          endsAt: { $exists: false }, 
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
+    const timeFilter = upcomingOnly
+      ? { startsAt: { $gte: now } }
+      : {
           $or: [
-            { startsAt: { $gte: new Date(Date.now() - 3 * 60 * 60 * 1000) } }, // Fallback: 3h grace if no endsAt
-            { startsAt: { $exists: false } } // Fallback: Keep if no time set
-          ]
-        },
-      ];
-    }
+            { endsAt: { $gte: now } },                                       // Has explicit end time, not yet ended
+            { endsAt: null, startsAt: { $gte: threeHoursAgo } },            // No endsAt but started within 3h
+            { endsAt: null, startsAt: { $exists: false } },                  // No time set at all — keep
+            { endsAt: { $exists: false }, startsAt: { $gte: threeHoursAgo } }, // endsAt missing, started within 3h
+            { endsAt: { $exists: false }, startsAt: { $exists: false } },    // No dates at all — keep
+          ],
+        };
+
+    // Merge status + time filters using $and so they don't override each other
+    query.$and = [
+      { status: { $nin: ["ended", "completed", "deleted"] } },
+      timeFilter,
+    ];
 
     if (nearLatRaw && nearLngRaw) {
       const lat = Number(nearLatRaw);

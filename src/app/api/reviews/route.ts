@@ -34,6 +34,19 @@ export async function GET(req: Request) {
         .limit(200)
         .toArray();
       
+      // ✅ Enrich with reviewer names & avatars
+      const reviewerIds = Array.from(new Set(allReviews.map(r => r.reviewerId))).filter(Boolean);
+      const reviewers = await db.collection("users").find(
+        { clerkUserId: { $in: reviewerIds } },
+        { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar": 1, "clerk.imageUrl": 1 } }
+      ).toArray();
+
+      const reviewerMap = new Map(reviewers.map(u => {
+        const name = `${u.profile?.firstName || ""} ${u.profile?.lastName || ""}`.trim() || "Guest";
+        const avatar = typeof u.profile?.avatar === 'string' ? u.profile.avatar : u.profile?.avatar?.url || u.clerk?.imageUrl || "";
+        return [u.clerkUserId, { name, avatar }];
+      }));
+      
       return NextResponse.json({
         ok: true,
         count: allReviews.length,
@@ -42,7 +55,9 @@ export async function GET(req: Request) {
           comment:   r.comment || "",
           images:    r.images || [],
           createdAt: r.createdAt,
-          reviewerId: r.reviewerId, // To link with attendee names if needed
+          reviewerId: r.reviewerId,
+          userName:   reviewerMap.get(r.reviewerId)?.name || "Guest",
+          userAvatar: reviewerMap.get(r.reviewerId)?.avatar || "",
         })),
       });
     }

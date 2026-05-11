@@ -14,7 +14,7 @@ function requireApiKey(req: Request) {
     : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
-function genOtp() { return String(Math.floor(1000 + Math.random() * 9000)); }
+function genOtp() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
 export async function POST(req: Request) {
   const guard = requireApiKey(req);

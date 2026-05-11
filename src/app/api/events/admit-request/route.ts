@@ -17,7 +17,7 @@ function requireApiKey(req: Request) {
 /**
  * Generates a 4-digit numeric OTP for check-in verification.
  */
-function genOtp() { return String(Math.floor(1000 + Math.random() * 9000)); }
+function genOtp() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
 /**
  * POST /api/events/admit-request

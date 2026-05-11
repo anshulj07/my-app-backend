@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       }
 
       // Generate OTP for check-in
-      const otp = String(Math.floor(1000 + Math.random() * 9000));
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
 
       // ── Confirm booking ─────────────────────────────────────────────────────
       await db.collection("bookings").updateOne(

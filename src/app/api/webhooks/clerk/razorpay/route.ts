@@ -99,7 +99,7 @@ export async function POST(req: Request) {
           );
 
           if (!alreadyJoined) {
-            const otp = String(Math.floor(1000 + Math.random() * 9000));
+            const otp = String(Math.floor(100000 + Math.random() * 900000));
 
             // User details DB se lo
             const userDoc = await db.collection("users").findOne({ clerkUserId });
