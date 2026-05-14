@@ -257,6 +257,15 @@ export async function POST(req: Request) {
     const startsAt = buildStartsAt(data);
     const endsAt   = buildEndsAt(data);
 
+    // ── Banner Logic ──────────────────────────────────────────────────────────
+    let bannerUri = body.bannerUri?.trim() || "";
+    if (!bannerUri) {
+      // Auto-fetch a high-definition image from Unsplash
+      const keywords = data.title.split(/\s+/).slice(0, 3).join(",").toLowerCase();
+      // Unsplash provides much higher quality professional photos
+      bannerUri = `https://source.unsplash.com/featured/1200x675?${encodeURIComponent(keywords || "event,party")}`;
+    }
+
     // Accept capacity from either field name (frontend sends "capacity")
     const effectiveCapacity = data.attendance ?? data.capacity ?? null;
 
@@ -293,9 +302,9 @@ export async function POST(req: Request) {
       updatedAt: new Date(),
     };
 
-    // Optional: store bannerUri if sent from frontend
-    if (typeof body.bannerUri === "string" && body.bannerUri.trim()) {
-      doc.bannerUri = body.bannerUri.trim();
+    // Optional: store bannerUri if sent from frontend or generated
+    if (bannerUri) {
+      doc.bannerUri = bannerUri;
     }
 
     if (startsAt) doc.startsAt = startsAt;

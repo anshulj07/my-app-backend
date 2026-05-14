@@ -357,7 +357,7 @@ export async function POST(req: Request) {
 
     // If free, confirm immediately
     if (!isPaid) {
-      const otp = String(Math.floor(1000 + Math.random() * 9000));
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
       await db.collection("bookings").updateOne(
         { _id: insertResult.insertedId },
         { $set: { checkInOtp: otp, status: "confirmed" } }
@@ -380,7 +380,7 @@ export async function POST(req: Request) {
     const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
     if (!KEY_ID || !KEY_SECRET) {
-      const otp = String(Math.floor(1000 + Math.random() * 9000));
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
       await db.collection("bookings").updateOne(
         { _id: insertResult.insertedId },
         { $set: { checkInOtp: otp, status: "confirmed" } }

@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
     // Generate OTP for check-in
-    const otp = String(Math.floor(1000 + Math.random() * 9000));
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
 
     // ── Confirm booking status ───────────────────────────────────────────────
     // We check the event's join policy. If it's 'approval', we don't 'confirm' (admit)

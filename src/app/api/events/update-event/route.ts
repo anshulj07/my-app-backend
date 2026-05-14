@@ -378,6 +378,8 @@ const PatchFieldsSchema = z
     }).optional(),
     // ✅ Banner / cover photo URL (allow empty string or full URL)
     bannerUri: z.union([z.string().url(), z.literal("")]).optional(),
+    capacity: z.number().int().min(0).nullable().optional(),
+    attendance: z.number().int().min(0).nullable().optional(),
   })
   .partial();
 
@@ -573,6 +575,10 @@ export async function PATCH(req: Request) {
     if (typeof serviceMetadata !== "undefined") $set.serviceMetadata = serviceMetadata;
     // ✅ Save banner/cover photo URL
     if (typeof bannerUri !== "undefined") $set.bannerUri = bannerUri ?? "";
+    const capacity = u.capacity ?? payload.capacity;
+    const attendance = u.attendance ?? payload.attendance;
+    if (typeof capacity !== "undefined") $set.capacity = capacity;
+    if (typeof attendance !== "undefined") $set.attendance = attendance;
 
     if (typeof location !== "undefined") {
       if (!location) {

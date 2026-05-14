@@ -52,38 +52,65 @@ export async function GET(req: Request) {
     };
 
     const items: NotifItem[] = [];
+    const allUserIds = new Set<string>();
+
+    for (const ev of events) {
+      for (const a of (ev as any).attendees || []) if (a.clerkId) allUserIds.add(a.clerkId);
+      for (const p of (ev as any).pendingRequests || []) if (p.clerkUserId) allUserIds.add(p.clerkUserId);
+    }
+
+    // Fetch proper profiles
+    const profileDocs = await db.collection("users").find(
+      { clerkUserId: { $in: Array.from(allUserIds) } },
+      { projection: { clerkUserId: 1, profile: 1, clerk: 1 } }
+    ).toArray();
+
+    const profileMap = new Map();
+    for (const d of profileDocs) {
+      const p = d.profile || {};
+      const c = d.clerk || {};
+      const firstName = String(p.firstName ?? c.firstName ?? "").trim();
+      const lastName = String(p.lastName ?? c.lastName ?? "").trim();
+      const fullName = `${firstName} ${lastName}`.trim();
+      profileMap.set(d.clerkUserId, {
+        name: fullName || "Someone",
+        imageUrl: p.avatar?.url || p.avatar || c.imageUrl || ""
+      });
+    }
 
     for (const ev of events) {
       const eventId = (ev as any)._id.toString();
       const eventTitle = String((ev as any).title || "Event");
       const eventEmoji = String((ev as any).emoji || "📍");
 
-      // Recent joins (last 30 per event) - confirmed attendees
+      // Recent joins
       for (const a of ((ev as any).attendees || []).slice(-30)) {
         const timestamp = a.joinedAt ? new Date(a.joinedAt).toISOString() : new Date().toISOString();
+        const prof = profileMap.get(a.clerkId) || {};
         items.push({
           id: `join-${eventId}-${a.clerkId}-${timestamp}`,
           type: "joined",
           eventId, eventTitle, eventEmoji,
-          userName: String(a.name || "Someone"),
+          userName: prof.name || String(a.name || "Someone"),
           userClerkId: String(a.clerkId || ""),
-          userImageUrl: String(a.imageUrl || ""),
+          userImageUrl: prof.imageUrl || String(a.imageUrl || ""),
           message: String(a.message || ""),
           timestamp,
           paid: !!a.razorpayPaymentId,
         });
       }
 
-      // Pending approval requests - not yet attendees
+      // Pending approval requests
       for (const p of ((ev as any).pendingRequests || [])) {
         const timestamp = p.requestedAt ? new Date(p.requestedAt).toISOString() : new Date().toISOString();
+        const prof = profileMap.get(p.clerkUserId) || {};
         items.push({
           id: `pending-${eventId}-${p.clerkUserId}-${timestamp}`,
           type: "pending",
           eventId, eventTitle, eventEmoji,
-          userName: String(p.name || "Someone"),
+          userName: prof.name || String(p.name || "Someone"),
           userClerkId: String(p.clerkUserId || ""),
-          userImageUrl: String(p.imageUrl || ""),
+          userImageUrl: prof.imageUrl || String(p.imageUrl || ""),
           message: String(p.message || ""),
           timestamp,
           paid: !!p.paid,

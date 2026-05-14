@@ -275,7 +275,7 @@ export async function POST(req: Request) {
 
     // ── If free, generate OTP immediately ────────────────────────────────────
     if (!isPaid) {
-      const otp = String(Math.floor(1000 + Math.random() * 9000));
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
       await db.collection("bookings").updateOne(
         { _id: result.insertedId },
         { $set: { checkInOtp: otp, status: "confirmed" } }
