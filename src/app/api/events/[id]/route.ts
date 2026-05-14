@@ -81,7 +81,8 @@ export async function GET(req: Request, context: Ctx) {
         "profile.photos": 1, 
         "clerk.firstName": 1, 
         "clerk.lastName": 1,
-        "clerk.imageUrl": 1
+        "clerk.imageUrl": 1,
+        "verification.idVerified": 1
       } 
     }
   ).toArray();
@@ -99,7 +100,7 @@ export async function GET(req: Request, context: Ctx) {
 
     return [
       u.clerkUserId,
-      { name: name || "User", avatar }
+      { name: name || "User", avatar, isVerified: !!u.verification?.idVerified }
     ];
   }));
 
@@ -129,6 +130,7 @@ export async function GET(req: Request, context: Ctx) {
         ? doc.creatorName 
         : (creatorInfo?.name || "Local Host"),
       creatorAvatar: creatorInfo?.avatar || doc.creatorAvatar || "",
+      creatorVerified: creatorInfo?.isVerified ?? false,
       attendees: enrichedAttendees,
       pendingRequests: enrichedPending
     }

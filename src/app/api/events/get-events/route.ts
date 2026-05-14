@@ -308,7 +308,7 @@ export async function GET(req: Request) {
     
     const usersData = await db.collection("users").find(
       { clerkUserId: { $in: allCreatorIds } },
-      { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar.url": 1, "clerk.firstName": 1, "clerk.lastName": 1 } }
+      { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar.url": 1, "clerk.firstName": 1, "clerk.lastName": 1, "verification.idVerified": 1 } }
     ).toArray();
 
     const userMap = new Map(usersData.map(u => {
@@ -316,7 +316,7 @@ export async function GET(req: Request) {
       const l = u.profile?.lastName || u.clerk?.lastName || "";
       return [
         u.clerkUserId,
-        { name: `${f} ${l}`.trim() || "User", avatar: u.profile?.avatar?.url || "" }
+        { name: `${f} ${l}`.trim() || "User", avatar: u.profile?.avatar?.url || "", isVerified: !!u.verification?.idVerified }
       ];
     }));
 
@@ -329,6 +329,7 @@ export async function GET(req: Request) {
           ? e.creatorName 
           : (creator?.name || "Local Host"),
         creatorAvatar: creator?.avatar || e.creatorAvatar || "",
+        creatorVerified: creator?.isVerified ?? false,
         // Ensure lat/lng are at top level for MapView
         lat: e.location?.lat ?? null,
         lng: e.location?.lng ?? null,

@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
   console.log("📌 x-clerk-user-id:", req.headers.get("x-clerk-user-id"));
 
   try {
-    // IMPORTANT: don't call req.formData() here.
     return await handler.POST(req);
   } catch (err: any) {
     console.error("🟥 [UT] POST error:", err);

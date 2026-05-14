@@ -267,7 +267,7 @@ export async function GET(req: Request) {
 
     const doc = await users.findOne(
       { clerkUserId, isDeleted: { $ne: true } },
-      { projection: { _id: 0, clerkUserId: 1, profile: 1, clerk: 1, onboarding: 1 } }
+      { projection: { _id: 0, clerkUserId: 1, profile: 1, clerk: 1, onboarding: 1, verification: 1 } }
     );
     
     // Fetch user stats from separate collection

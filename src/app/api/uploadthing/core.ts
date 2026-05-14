@@ -30,7 +30,7 @@ const photosRoute = () =>
       console.log("🟩 file:", file);
 
       return {
-        url: file.ufsUrl,
+        url: file.url,
         key: file.key,
         clerkUserId: metadata.clerkUserId,
       };

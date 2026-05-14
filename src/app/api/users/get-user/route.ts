@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 
   const user = await db.collection("users").findOne(
     { clerkUserId }, // ✅ matches your screenshot field name
-    { projection: { clerkUserId: 1, profile: 1 } }
+    { projection: { clerkUserId: 1, profile: 1, verification: 1 } }
   );
 
   return NextResponse.json({ ok: true, user }, { status: 200 });

@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
         "clerk.firstName":   1,
         "clerk.lastName":    1,
         "clerk.imageUrl":    1,
+        "verification.idVerified": 1,
       })
       .toArray();
 
@@ -69,6 +70,7 @@ export async function GET(req: NextRequest) {
 
       return {
         clerkUserId: u.clerkUserId,
+        isVerified: !!u.verification?.idVerified,
         profile: {
           firstName: u.profile?.firstName || u.clerk?.firstName || "",
           lastName:  u.profile?.lastName  || u.clerk?.lastName  || "",
