@@ -1,5 +1,5 @@
 import { Db } from "mongodb";
-import clientPromise from "./mongodb";
+import clientPromise from "../../lib/mongodb";
 
 /**
  * Recalculates all stats for a specific host and updates the user_stats collection.
