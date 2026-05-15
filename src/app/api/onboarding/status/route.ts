@@ -6,8 +6,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Step =
-  | "none"
-  | "name"
   | "username"
   | "dateOfBirth"
   | "gender"
@@ -17,8 +15,6 @@ type Step =
   | "complete";
 
 const STEP_TO_ROUTE: Record<Step, string> = {
-  none:        "/(onboarding)/name",
-  name:        "/(onboarding)/name",
   username:    "/(onboarding)/username",
   dateOfBirth: "/(onboarding)/dateOfBirth",
   gender:      "/(onboarding)/gender",
@@ -27,6 +23,10 @@ const STEP_TO_ROUTE: Record<Step, string> = {
   photos:      "/(onboarding)/photos",
   complete:    "/newApp/home",
 };
+
+const VALID_STEPS = new Set<Step>([
+  "username", "dateOfBirth", "gender", "interests", "about", "photos", "complete",
+]);
 
 export async function GET(req: Request) {
   try {
@@ -43,38 +43,28 @@ export async function GET(req: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db("assis_auth");
-    const users = db.collection("users");
+    const db     = client.db("assis_auth");
+    const users  = db.collection("users");
 
     const doc = await users.findOne(
       { clerkUserId, isDeleted: { $ne: true } },
       { projection: { onboarding: 1 } }
     );
 
-    // If user doc not found, force onboarding start.
+    // User doc not found — start from beginning
     if (!doc) {
       return NextResponse.json(
-        { completed: false, step: "name", nextRoute: STEP_TO_ROUTE.name },
+        { completed: false, step: "username", nextRoute: STEP_TO_ROUTE.username },
         { headers: { "Cache-Control": "no-store" } }
       );
     }
 
-    const stepRaw = doc?.onboarding?.step;
+    const stepRaw    = doc?.onboarding?.step;
     const completedRaw = doc?.onboarding?.completed;
 
-    const isValidStep = (x: any): x is Step =>
-      x === "none" ||
-      x === "name" ||
-      x === "username" ||
-      x === "dateOfBirth" ||
-      x === "gender" ||
-      x === "interests" ||
-      x === "about" ||
-      x === "photos" ||
-      x === "complete";
-
-    const step: Step = isValidStep(stepRaw) ? stepRaw : "name";
-    const completed = completedRaw === true || step === "complete";
+    // Migrate legacy "name" / "none" steps to "username"
+    const step: Step = VALID_STEPS.has(stepRaw) ? stepRaw : "username";
+    const completed  = completedRaw === true || step === "complete";
 
     return NextResponse.json(
       {
