@@ -248,23 +248,6 @@ export async function GET(req: Request) {
     }
     const { db, users } = await getUsersCollection();
 
-    await users.updateOne(
-      { clerkUserId },
-      {
-        $setOnInsert: {
-          clerkUserId,
-          profile: {
-            firstName: null, lastName: null, about: null, username: null,
-            gender: null, age: null, interests: [], languages: [], photos: [], location: null,
-          },
-          onboarding: { completed: false, step: "name" },
-          createdAt: new Date(), deletedAt: null, isDeleted: false,
-        },
-        $set: { updatedAt: new Date() },
-      },
-      { upsert: true }
-    );
-
     const doc = await users.findOne(
       { clerkUserId, isDeleted: { $ne: true } },
       { projection: { _id: 0, clerkUserId: 1, profile: 1, clerk: 1, onboarding: 1, verification: 1 } }
