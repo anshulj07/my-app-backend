@@ -165,7 +165,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
 
-    const limit = Math.min(Number(searchParams.get("limit") || 50), 500);
+    const limit = Number(searchParams.get("limit") || 5000) || 5000;
 
     const country = (searchParams.get("country") || "").trim().toUpperCase();
     const admin1 = (searchParams.get("admin1") || "").trim();
@@ -187,25 +187,41 @@ export async function GET(req: Request) {
 
     const client = await clientPromise;
     const db = client.db("assis_auth");
-    
-    // ✅ Decide which collections to query based on 'kind'
-    // If kind is 'service', we only look in services.
-    // If kind is 'free'|'paid', we only look in events.
-    // If kind is missing/empty, we look in both for the map.
+
+    // Which internal collections to query based on 'kind' filter
     const collectionsToQuery = [];
     if (!kind || kind === "service") collectionsToQuery.push(db.collection("services"));
     if (!kind || kind === "free" || kind === "paid") collectionsToQuery.push(db.collection("events"));
 
+    // category filter (walking/running/pickleball/hiking/fitness/networking/social/sports)
+    const COMMUNITY_CATEGORIES = new Set([
+      "walking", "running", "pickleball", "hiking",
+      "fitness", "networking", "social", "sports", "other",
+    ]);
+    const category = (searchParams.get("category") || "").trim().toLowerCase();
+
+    // external_events: include when no kind filter OR kind is 'free'
+    // skip when filtering for paid/service (external events are all free)
+    const includeExternal = !kind || kind === "free";
+    if (includeExternal) collectionsToQuery.push(db.collection("external_events"));
+
     const query: any = {};
 
-    if (visibility !== "all") query.visibility = visibility;
+    // Exclude private events — but don't require "public" explicitly.
+    // Many docs lack the visibility field entirely; $ne keeps them visible.
+    if (visibility !== "all") {
+      query.visibility = { $ne: "private" };
+    }
 
     if (country) query["location.countryCode"] = country;
     if (admin1) query["location.admin1"] = admin1;
     if (cityKey) query["location.cityKey"] = cityKey;
 
-    // ✅ kind filter
+    // kind filter (only for internal events/services)
     if (kind === "free" || kind === "paid" || kind === "service") query.kind = kind;
+
+    // category filter — applies to external_events; for internal events we match on tags
+    if (category && COMMUNITY_CATEGORIES.has(category)) query.category = category;
 
     // ✅ Always exclude ended/deleted events
     // ✅ Smart expiry: hide events that have passed (combined with $and to avoid conflict)
@@ -257,18 +273,38 @@ export async function GET(req: Request) {
       }
     }
 
+    // Only fetch fields needed for map pins + event sheet (skip heavy arrays)
+    const mapProjection = {
+      _id: 1, title: 1, emoji: 1, kind: 1, status: 1, description: 1,
+      location: 1, address: 1, when: 1,
+      creatorClerkId: 1, creatorName: 1, creatorAvatar: 1,
+      date: 1, time: 1, startsAt: 1, endsAt: 1, endTime: 1, endDate: 1,
+      priceCents: 1, joinPolicy: 1, attendance: 1, createdAt: 1,
+      visibility: 1, tags: 1, bannerImage: 1, bannerUri: 1,
+      // external_events-specific fields
+      category: 1, source: 1, sourceUrl: 1, organizer: 1,
+      // explicitly exclude heavy arrays: attendees, pendingRequests
+    };
+
     // ✅ Fetch from all relevant collections in parallel
     const results = await Promise.all(
-      collectionsToQuery.map(col => 
-        col.find(query)
+      collectionsToQuery.map(col =>
+        col.find(query, { projection: mapProjection })
            .sort({ createdAt: -1, _id: -1 })
            .limit(limit)
            .toArray()
       )
     );
 
-    // ✅ Merge and re-sort
+    // ✅ Merge, deduplicate by _id (same doc may exist in both collections), re-sort
+    const seen = new Set<string>();
     const docs = results.flat()
+      .filter((e: any) => {
+        const id = e._id?.toString();
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      })
       .sort((a: any, b: any) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -276,40 +312,32 @@ export async function GET(req: Request) {
       })
       .slice(0, limit);
 
-    // ✅ Post-fetch: filter events using date+time string fields (fallback for old docs)
+    // Collect creator IDs from all docs before filtering (start users query early)
+    const allCreatorIdsRaw = Array.from(new Set(docs.map((e: any) => e.creatorClerkId))).filter(Boolean) as string[];
+
     const nowTs = Date.now();
-    const filteredDocs = docs.filter((e: any) => {
-      // Priority 1: Use endsAt/startsAt if they exist (already handled by DB, but good to double check)
+    const postFilter = (e: any): boolean => {
       if (e.endsAt) return new Date(e.endsAt).getTime() >= nowTs;
       if (e.startsAt) return new Date(e.startsAt).getTime() >= nowTs - 3 * 60 * 60 * 1000;
-
-      // Fallback: parse date+time string
       const date = String(e.date || "").trim();
       const time = String(e.time || "").trim();
       const endTime = String(e.endTime || "").trim();
-
-      if (!date) return true; // no date = keep
-
+      if (!date) return true;
       let endMs = 0;
-      if (endTime) {
-        endMs = new Date(`${date}T${endTime}:00Z`).getTime();
-      } else if (time) {
-        endMs = new Date(`${date}T${time}:00Z`).getTime() + 3 * 60 * 60 * 1000; // 3h default
-      } else {
-        endMs = new Date(`${date}T23:59:59Z`).getTime();
-      }
+      if (endTime)      endMs = new Date(`${date}T${endTime}:00Z`).getTime();
+      else if (time)    endMs = new Date(`${date}T${time}:00Z`).getTime() + 3 * 60 * 60 * 1000;
+      else              endMs = new Date(`${date}T23:59:59Z`).getTime();
+      return !Number.isFinite(endMs) || endMs >= nowTs;
+    };
 
-      if (!Number.isFinite(endMs)) return true;
-      return endMs >= nowTs;
-    });
-
-    // ✅ Return all fields needed by map pins + sheets
-    const allCreatorIds = Array.from(new Set(filteredDocs.map((e: any) => e.creatorClerkId))).filter(Boolean);
-    
-    const usersData = await db.collection("users").find(
-      { clerkUserId: { $in: allCreatorIds } },
-      { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar.url": 1, "clerk.firstName": 1, "clerk.lastName": 1 } }
-    ).toArray();
+    // ✅ Run post-filter and users lookup concurrently
+    const [filteredDocs, usersData] = await Promise.all([
+      Promise.resolve(docs.filter(postFilter)),
+      db.collection("users").find(
+        { clerkUserId: { $in: allCreatorIdsRaw } },
+        { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar.url": 1, "clerk.firstName": 1, "clerk.lastName": 1 } }
+      ).toArray(),
+    ]);
 
     const userMap = new Map(usersData.map(u => {
       const f = u.profile?.firstName || u.clerk?.firstName || "";
@@ -322,16 +350,23 @@ export async function GET(req: Request) {
 
     const events = filteredDocs.map((e: any) => {
       const creator = userMap.get(String(e.creatorClerkId || ""));
+      const isExternal = !!e.source; // external_events have a 'source' field
       return {
         ...e,
         _id: e._id.toString(),
-        creatorName: (e.creatorName && e.creatorName !== "Local Host") 
-          ? e.creatorName 
-          : (creator?.name || "Local Host"),
+        creatorName: isExternal
+          ? (e.organizer?.name || e.creatorName || "Community Event")
+          : ((e.creatorName && e.creatorName !== "Local Host")
+              ? e.creatorName
+              : (creator?.name || "Local Host")),
         creatorAvatar: creator?.avatar || e.creatorAvatar || "",
         // Ensure lat/lng are at top level for MapView
         lat: e.location?.lat ?? null,
         lng: e.location?.lng ?? null,
+        // Community discovery fields
+        category:   e.category   ?? null,
+        source:     e.source     ?? "manual",
+        sourceUrl:  e.sourceUrl  ?? null,
       };
     });
 
@@ -343,8 +378,14 @@ export async function GET(req: Request) {
         }
       : null;
 
-    return NextResponse.json({ ok: true, events, nextCursor });
+    return NextResponse.json({ ok: true, events, nextCursor }, {
+      headers: {
+        // Cache 15s at CDN/proxy; client revalidates. Prevents hammering DB on rapid re-opens.
+        "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30",
+      },
+    });
   } catch (e: any) {
+    console.error("[get-events] Error:", e);
     return NextResponse.json(
       { error: "Server error", detail: e?.message ?? "" },
       { status: 500 }
