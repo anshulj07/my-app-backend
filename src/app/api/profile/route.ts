@@ -272,7 +272,7 @@ export async function GET(req: Request) {
         email: p.email || c.email || "",
         about: typeof p.about === "string" ? p.about : "",
         interests: Array.isArray(p.interests) ? p.interests : [],
-        languages: Array.isArray(p.languages) ? p.languages : [],
+        languages: Array.isArray(p.languages) && p.languages.length > 0 ? p.languages : null,
         photos: normalizePhotoUrls(p.photos),
         avatar: typeof p.avatar === "string" ? p.avatar : (p.avatar?.url || null),
         gender: p.gender || "",
@@ -292,7 +292,7 @@ export async function GET(req: Request) {
         thisMonthEarning: stats?.thisMonthEarning ?? 0,
         overallEarning: stats?.overallEarning ?? 0,
         // ✅ Services (titles of service-kind events)
-        services: Array.isArray(stats?.services) ? stats.services : [],
+        services: Array.isArray(stats?.services) && stats.services.length > 0 ? stats.services : null,
         isVerified: !!safeDoc.verification?.idVerified,
         onboarding: safeDoc.onboarding ?? null,
       },

@@ -158,6 +158,212 @@ function normKey(s: string) {
     .replace(/\s/g, "-");
 }
 
+function getTMEmoji(segment: string, genre: string, subGenre: string, title: string): string {
+  const t = title.toLowerCase();
+
+  // Music segment
+  if (segment === "music") {
+    if (genre.includes("rock") || subGenre.includes("rock")) return "🎸";
+    if (genre.includes("hip-hop") || genre.includes("rap") || subGenre.includes("hip-hop")) return "🎤";
+    if (genre.includes("pop")) return "🎵";
+    if (genre.includes("jazz")) return "🎷";
+    if (genre.includes("classical") || genre.includes("opera")) return "🎻";
+    if (genre.includes("country")) return "🤠";
+    if (genre.includes("r&b") || genre.includes("soul")) return "🎶";
+    if (genre.includes("electronic") || genre.includes("dance") || genre.includes("edm")) return "🎧";
+    if (genre.includes("metal") || genre.includes("punk")) return "🤘";
+    if (genre.includes("reggae")) return "🇯🇲";
+    if (genre.includes("latin")) return "💃";
+    if (genre.includes("folk") || genre.includes("acoustic")) return "🪕";
+    if (genre.includes("blues")) return "🎺";
+    if (genre.includes("gospel") || genre.includes("christian")) return "🙏";
+    return "🎵";
+  }
+
+  // Sports segment
+  if (segment === "sports") {
+    if (genre.includes("football") || subGenre.includes("nfl")) return "🏈";
+    if (genre.includes("soccer") || genre.includes("football") && t.includes("soccer")) return "⚽";
+    if (genre.includes("basketball") || subGenre.includes("nba")) return "🏀";
+    if (genre.includes("baseball") || subGenre.includes("mlb")) return "⚾";
+    if (genre.includes("hockey") || subGenre.includes("nhl")) return "🏒";
+    if (genre.includes("tennis")) return "🎾";
+    if (genre.includes("golf")) return "⛳";
+    if (genre.includes("boxing") || genre.includes("mma") || genre.includes("wrestling")) return "🥊";
+    if (genre.includes("motorsport") || genre.includes("racing") || t.includes("nascar") || t.includes("formula")) return "🏎️";
+    if (genre.includes("cricket")) return "🏏";
+    if (genre.includes("rugby")) return "🏉";
+    if (genre.includes("volleyball")) return "🏐";
+    if (genre.includes("swimming") || genre.includes("diving")) return "🏊";
+    if (genre.includes("athletics") || genre.includes("track")) return "🏃";
+    if (genre.includes("cycling")) return "🚴";
+    if (genre.includes("gymnastics")) return "🤸";
+    return "🏆";
+  }
+
+  // Arts & Theatre
+  if (segment.includes("arts") || segment.includes("theatre")) {
+    if (genre.includes("musical") || subGenre.includes("musical")) return "🎭";
+    if (genre.includes("comedy") || t.includes("comedy") || t.includes("stand-up")) return "😂";
+    if (genre.includes("ballet") || genre.includes("dance")) return "🩰";
+    if (genre.includes("opera")) return "🎼";
+    if (genre.includes("circus")) return "🎪";
+    if (genre.includes("magic")) return "🪄";
+    if (genre.includes("puppetry")) return "🎎";
+    return "🎭";
+  }
+
+  // Family
+  if (segment === "family") {
+    if (t.includes("disney") || t.includes("frozen") || t.includes("lion king")) return "🏰";
+    if (t.includes("circus")) return "🎪";
+    if (t.includes("magic")) return "🪄";
+    if (t.includes("holiday") || t.includes("christmas") || t.includes("xmas")) return "🎄";
+    return "👨‍👩‍👧‍👦";
+  }
+
+  // Film/Media
+  if (segment === "film" || segment === "media") {
+    if (genre.includes("comedy")) return "😂";
+    if (genre.includes("horror")) return "👻";
+    if (genre.includes("action")) return "💥";
+    return "🎬";
+  }
+
+  // Miscellaneous / fallback from title keywords
+  if (t.includes("food") || t.includes("dinner") || t.includes("brunch") || t.includes("tasting")) return "🍽️";
+  if (t.includes("wine") || t.includes("beer") || t.includes("cocktail") || t.includes("brewery")) return "🍷";
+  if (t.includes("festival") || t.includes("fest")) return "🎡";
+  if (t.includes("conference") || t.includes("summit") || t.includes("expo")) return "🎤";
+  if (t.includes("marathon") || t.includes("run") || t.includes("race") || t.includes("5k")) return "🏃";
+  if (t.includes("yoga") || t.includes("wellness") || t.includes("meditation")) return "🧘";
+  if (t.includes("comedy") || t.includes("stand up") || t.includes("standup")) return "😂";
+  if (t.includes("art") || t.includes("gallery") || t.includes("museum") || t.includes("exhibit")) return "🖼️";
+  if (t.includes("dance") || t.includes("salsa") || t.includes("bachata")) return "💃";
+  if (t.includes("halloween") || t.includes("horror")) return "👻";
+  if (t.includes("christmas") || t.includes("holiday") || t.includes("xmas")) return "🎄";
+  if (t.includes("new year")) return "🎆";
+  if (t.includes("networking") || t.includes("meetup") || t.includes("social")) return "🤝";
+  if (t.includes("tech") || t.includes("startup") || t.includes("hackathon")) return "💻";
+  if (t.includes("kids") || t.includes("children") || t.includes("family")) return "👨‍👩‍👧‍👦";
+  if (t.includes("charity") || t.includes("fundraiser") || t.includes("benefit")) return "❤️";
+  if (t.includes("market") || t.includes("fair") || t.includes("bazaar")) return "🛍️";
+
+  return "📍";
+}
+
+async function fetchTicketmasterEvents(params: any) {
+  const tmApiKey = process.env.TICKETMASTER_API_KEY;
+  if (!tmApiKey) return [];
+
+  try {
+    const { nearLatRaw, nearLngRaw, radiusMRaw, city } = params;
+    const PAGE_SIZE = 200; // Ticketmaster max per request
+    const NUM_PAGES = 5;   // Fetch 5 pages in parallel = up to 1000 events
+
+    // Use current time to filter out past events
+    const nowISO = new Date().toISOString().split('.')[0] + "Z";
+
+    // Build base URL depending on location params
+    let baseUrl = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${tmApiKey}&size=${PAGE_SIZE}&sort=date,asc&startDateTime=${nowISO}`;
+
+    if (nearLatRaw && nearLngRaw) {
+      const radiusMiles = radiusMRaw ? Math.max(1, Math.round(Number(radiusMRaw) / 1609.34)) : 50;
+      baseUrl += `&latlong=${nearLatRaw},${nearLngRaw}&radius=${radiusMiles}&unit=miles`;
+    } else if (city) {
+      baseUrl += `&city=${encodeURIComponent(city)}`;
+    }
+
+    // Fetch page 0 first to know total pages available
+    const firstRes = await fetch(`${baseUrl}&page=0`);
+    if (!firstRes.ok) throw new Error(`TM HTTP ${firstRes.status}`);
+    const firstData = await firstRes.json();
+
+    let events: any[] = firstData?._embedded?.events || [];
+    const totalPages: number = firstData?.page?.totalPages ?? 0;
+
+    // If no events locally, fallback to global (no location filter)
+    if (events.length === 0 && (nearLatRaw || city)) {
+      const fallbackBase = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${tmApiKey}&size=${PAGE_SIZE}&sort=date,asc&startDateTime=${nowISO}`;
+      const fallbackRes = await fetch(`${fallbackBase}&page=0`);
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        events = fallbackData?._embedded?.events || [];
+        const fbTotalPages = fallbackData?.page?.totalPages ?? 0;
+        // Parallel fetch remaining fallback pages
+        if (fbTotalPages > 1) {
+          const extraPages = Math.min(NUM_PAGES - 1, fbTotalPages - 1);
+          const pagePromises = Array.from({ length: extraPages }, (_, i) =>
+            fetch(`${fallbackBase}&page=${i + 1}`).then(r => r.ok ? r.json() : null)
+          );
+          const extraResults = await Promise.all(pagePromises);
+          for (const r of extraResults) {
+            if (r?._embedded?.events) events = events.concat(r._embedded.events);
+          }
+        }
+      }
+    } else if (totalPages > 1) {
+      // Parallel fetch remaining pages for the location-based result
+      const extraPages = Math.min(NUM_PAGES - 1, totalPages - 1);
+      const pagePromises = Array.from({ length: extraPages }, (_, i) =>
+        fetch(`${baseUrl}&page=${i + 1}`).then(r => r.ok ? r.json() : null)
+      );
+      const extraResults = await Promise.all(pagePromises);
+      for (const r of extraResults) {
+        if (r?._embedded?.events) events = events.concat(r._embedded.events);
+      }
+    }
+
+    // Transform to internal schema
+    return events.map((e: any) => {
+      const img = e.images?.find((i: any) => i.ratio === "16_9" && i.width > 600) || e.images?.[0];
+      const venue = e._embedded?.venues?.[0];
+      
+      let price = 0;
+      if (e.priceRanges && e.priceRanges.length > 0) {
+        price = Math.round(e.priceRanges[0].min * 100);
+      }
+
+      // Smart emoji from Ticketmaster classifications
+      const cls = e.classifications?.[0];
+      const segment = (cls?.segment?.name || "").toLowerCase();
+      const genre = (cls?.genre?.name || "").toLowerCase();
+      const subGenre = (cls?.subGenre?.name || "").toLowerCase();
+      const emoji = getTMEmoji(segment, genre, subGenre, e.name || "");
+
+      return {
+        _id: `tm_${e.id}`,
+        title: e.name,
+        emoji,
+        description: e.description || e.info || "",
+        bannerUri: img?.url || "",
+        date: e.dates?.start?.localDate || "",
+        time: e.dates?.start?.localTime || "",
+        startsAt: e.dates?.start?.dateTime ? new Date(e.dates.start.dateTime) : undefined,
+        priceCents: price,
+        kind: price > 0 ? "paid" : "event",
+        creatorName: "Ticketmaster",
+        creatorClerkId: "ticketmaster",
+        location: {
+          lat: venue?.location?.latitude ? Number(venue.location.latitude) : null,
+          lng: venue?.location?.longitude ? Number(venue.location.longitude) : null,
+          city: venue?.city?.name || "",
+          admin1: venue?.state?.name || "",
+          address: venue?.address?.line1 || "",
+          formattedAddress: `${venue?.address?.line1 || ""}, ${venue?.city?.name || ""}`.replace(/^,\s*/, ''),
+        },
+        status: "active",
+        createdAt: new Date(),
+      };
+    });
+
+  } catch (err) {
+    console.error("Ticketmaster fetch error:", err);
+    return [];
+  }
+}
+
+
 export async function GET(req: Request) {
   const auth = requireApiKey(req);
   if (auth) return auth;
@@ -258,23 +464,35 @@ export async function GET(req: Request) {
     }
 
     // ✅ Fetch from all relevant collections in parallel
-    const results = await Promise.all(
-      collectionsToQuery.map(col => 
-        col.find(query)
-           .sort({ createdAt: -1, _id: -1 })
-           .limit(limit)
-           .toArray()
-      )
+    const queries: Promise<any[]>[] = collectionsToQuery.map(col => 
+      col.find(query)
+         .sort({ createdAt: -1, _id: -1 })
+         .limit(limit)
+         .toArray()
     );
 
-    // ✅ Merge and re-sort
-    const docs = results.flat()
-      .sort((a: any, b: any) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      })
-      .slice(0, limit);
+    // ✅ Fetch Ticketmaster events ONLY if on the first page and not filtering solely for services
+    if (!cursorId && (!kind || kind === "free" || kind === "paid")) {
+      queries.push(fetchTicketmasterEvents({ nearLatRaw, nearLngRaw, radiusMRaw, city }));
+    }
+
+    const results = await Promise.all(queries);
+
+    // ✅ Separate DB results from Ticketmaster results
+    // Ticketmaster is always the last item pushed into queries[]
+    const hasTM = !cursorId && (!kind || kind === "free" || kind === "paid");
+    const dbResults = hasTM ? results.slice(0, -1) : results;
+    const tmResults = hasTM ? (results[results.length - 1] || []) : [];
+
+    // DB events sorted by createdAt desc
+    const dbDocs = dbResults.flat().sort((a: any, b: any) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    // DB events come FIRST, then Ticketmaster events appended after
+    const docs = [...dbDocs, ...tmResults];
 
     // ✅ Post-fetch: filter events using date+time string fields (fallback for old docs)
     const nowTs = Date.now();
