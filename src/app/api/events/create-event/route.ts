@@ -217,6 +217,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { EventCreateSchema, buildStartsAt, buildEndsAt } from "../../../../../lib/eventSchema/eventDefault";
 import { INITIAL_USER_STATS } from "../../../../../lib/userSchema/userStatsSchema";
+import { getSmartEmojiFromTitle } from "../../../../../lib/emojiHelper";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -272,7 +273,7 @@ export async function POST(req: Request) {
     const doc: Record<string, any> = {
       title:          data.title.trim(),
       description:    (data.description ?? "").trim(),
-      emoji:          data.emoji ?? "📍",
+      emoji:          data.emoji && data.emoji !== "📍" ? data.emoji : getSmartEmojiFromTitle(data.title.trim()),
       creatorClerkId,
       creatorName:    body.creatorName || "Local Host",
       kind:           data.kind ?? "free",

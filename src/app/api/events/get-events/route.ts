@@ -387,6 +387,7 @@ export async function GET(req: Request) {
 
     const visibility = (searchParams.get("visibility") || "public").trim();
     const upcomingOnly = (searchParams.get("upcomingOnly") || "").trim() === "1";
+    const source = (searchParams.get("source") || "all").trim();
 
     // ✅ kind filter support: "free" | "paid" | "service"
     const kind = (searchParams.get("kind") || "").trim();
@@ -464,23 +465,28 @@ export async function GET(req: Request) {
     }
 
     // ✅ Fetch from all relevant collections in parallel
-    const queries: Promise<any[]>[] = collectionsToQuery.map(col => 
-      col.find(query)
-         .sort({ createdAt: -1, _id: -1 })
-         .limit(limit)
-         .toArray()
-    );
+    let queries: Promise<any[]>[] = [];
+    
+    if (source === "all" || source === "db") {
+      queries = collectionsToQuery.map(col => 
+        col.find(query)
+           .sort({ createdAt: -1, _id: -1 })
+           .limit(limit)
+           .toArray()
+      );
+    }
 
     // ✅ Fetch Ticketmaster events ONLY if on the first page and not filtering solely for services
-    if (!cursorId && (!kind || kind === "free" || kind === "paid")) {
+    let hasTM = false;
+    if ((source === "all" || source === "tm") && !cursorId && (!kind || kind === "free" || kind === "paid")) {
+      hasTM = true;
       queries.push(fetchTicketmasterEvents({ nearLatRaw, nearLngRaw, radiusMRaw, city }));
     }
 
     const results = await Promise.all(queries);
 
     // ✅ Separate DB results from Ticketmaster results
-    // Ticketmaster is always the last item pushed into queries[]
-    const hasTM = !cursorId && (!kind || kind === "free" || kind === "paid");
+    // Ticketmaster is always the last item pushed into queries[] if hasTM is true
     const dbResults = hasTM ? results.slice(0, -1) : results;
     const tmResults = hasTM ? (results[results.length - 1] || []) : [];
 
