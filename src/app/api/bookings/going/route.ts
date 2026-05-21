@@ -177,11 +177,12 @@ export async function GET(req: Request) {
       .find({ bookerId: clerkUserId, type: { $in: ["event", "service"] } })
       .toArray();
 
-    // ✅ Step 2: Get events where user is a confirmed attendee (in events collection)
-    const joinedDocs = await db.collection("events")
-      .find({ "attendees.clerkId": clerkUserId })
-      .sort({ startsAt: 1, createdAt: -1 })
-      .toArray();
+    // ✅ Step 2: Get events AND services where user is a confirmed attendee
+    const [joinedEventsRaw, joinedServicesRaw] = await Promise.all([
+      db.collection("events").find({ "attendees.clerkId": clerkUserId }).sort({ startsAt: 1, createdAt: -1 }).toArray(),
+      db.collection("services").find({ "attendees.clerkId": clerkUserId }).sort({ startsAt: 1, createdAt: -1 }).toArray()
+    ]);
+    const joinedDocs = [...joinedEventsRaw, ...joinedServicesRaw];
 
     // ✅ Step 3: Find other events/services where user has a non-pending booking
     const relevantBookingIds = allBookings
@@ -241,11 +242,12 @@ export async function GET(req: Request) {
       };
     });
 
-    // ✅ Step 4: Handle legacy pending requests (ensure they aren't unpaid)
-    const pendingDocs = await db.collection("events")
-      .find({ "pendingRequests.clerkUserId": clerkUserId })
-      .sort({ startsAt: 1, createdAt: -1 })
-      .toArray();
+    // ✅ Step 4: Handle legacy pending requests (from both events and services)
+    const [pendingEventsRaw, pendingServicesRaw] = await Promise.all([
+      db.collection("events").find({ "pendingRequests.clerkUserId": clerkUserId }).sort({ startsAt: 1, createdAt: -1 }).toArray(),
+      db.collection("services").find({ "pendingRequests.clerkUserId": clerkUserId }).sort({ startsAt: 1, createdAt: -1 }).toArray()
+    ]);
+    const pendingDocs = [...pendingEventsRaw, ...pendingServicesRaw];
 
     const pendingEvents = pendingDocs
       .filter((e: any) => !joinedIds.has(e._id.toString()))

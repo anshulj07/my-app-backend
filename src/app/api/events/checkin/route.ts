@@ -14,7 +14,7 @@ function requireApiKey(req: Request) {
 const CheckInSchema = z.object({
   eventId: z.string().min(1),
   creatorClerkId: z.string().min(1),
-  otp: z.string().length(4),
+  otp: z.string().length(6),
 });
 
 export async function POST(req: Request) {

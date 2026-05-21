@@ -435,7 +435,8 @@ export async function PATCH(req: Request) {
 
     // ✅ merge: updates wins over flat
     const title = (u.title ?? payload.title)?.trim();
-    const emoji = (u.emoji ?? payload.emoji) ?? undefined;
+    const defaultFallback = existing.kind === "service" ? "🛠️" : "📍";
+    const emoji = (u.emoji ?? payload.emoji) ?? getSmartEmojiFromTitle(u.title ?? existing.title ?? "", defaultFallback);
     const description = (u.description ?? payload.description) ?? undefined;
 
     const rawKind = (u.kind ?? payload.kind) ?? undefined;

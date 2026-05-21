@@ -273,7 +273,7 @@ export async function POST(req: Request) {
     const doc: Record<string, any> = {
       title:          data.title.trim(),
       description:    (data.description ?? "").trim(),
-      emoji:          data.emoji && data.emoji !== "📍" ? data.emoji : getSmartEmojiFromTitle(data.title.trim()),
+      emoji:          data.emoji && data.emoji !== "📍" ? data.emoji : getSmartEmojiFromTitle(data.title.trim(), data.kind === "service" ? "🛠️" : "📍"),
       creatorClerkId,
       creatorName:    body.creatorName || "Local Host",
       kind:           data.kind ?? "free",

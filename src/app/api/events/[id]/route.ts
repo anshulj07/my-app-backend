@@ -112,12 +112,14 @@ export async function GET(req: Request, context: Ctx) {
 
   const enrichedAttendees = attendees.map((a: any) => ({
     ...a,
-    imageUrl: a.imageUrl || userMap.get(String(a.clerkId || a.clerkUserId || ""))?.avatar || ""
+    name: userMap.get(String(a.clerkId || a.clerkUserId || ""))?.name || a.name || "Guest",
+    imageUrl: userMap.get(String(a.clerkId || a.clerkUserId || ""))?.avatar || a.imageUrl || ""
   }));
 
   const enrichedPending = pending.map((p: any) => ({
     ...p,
-    imageUrl: p.imageUrl || userMap.get(String(p.clerkUserId || ""))?.avatar || ""
+    name: userMap.get(String(p.clerkUserId || ""))?.name || p.name || "Guest",
+    imageUrl: userMap.get(String(p.clerkUserId || ""))?.avatar || p.imageUrl || ""
   }));
 
   return NextResponse.json({
@@ -125,10 +127,8 @@ export async function GET(req: Request, context: Ctx) {
     event: {
       ...doc,
       _id: doc._id.toString(),
-      creatorName: (doc.creatorName && doc.creatorName !== "Local Host") 
-        ? doc.creatorName 
-        : (creatorInfo?.name || "Local Host"),
-      creatorAvatar: creatorInfo?.avatar || doc.creatorAvatar || "",
+      creatorName: creatorInfo?.name || (doc.creatorName && doc.creatorName !== "Local Host" ? doc.creatorName : "Local Host"),
+      creatorAvatar: creatorInfo?.avatar || doc.creatorAvatar || "https://i.pravatar.cc/100",
       attendees: enrichedAttendees,
       pendingRequests: enrichedPending
     }
