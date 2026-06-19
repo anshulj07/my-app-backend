@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     const eventId    = String(body.eventId    || "").trim();
     const rating     = Number(body.rating);
     const comment    = String(body.comment    || "").trim().slice(0, 300);
-    const images     = Array.isArray(body.images) ? body.images.filter(img => typeof img === "string") : [];
+    const images     = Array.isArray(body.images) ? body.images.filter((img: any) => typeof img === "string") : [];
 
     if (!hostId || !reviewerId || isNaN(rating) || rating < 1 || rating > 5) {
       return NextResponse.json({ error: "Invalid review data" }, { status: 400 });

@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       quality: "standard",
       response_format: "url",
     });
-    imageUrl = response.data[0]?.url ?? "";
+    imageUrl = response?.data?.[0]?.url ?? "";
     if (!imageUrl) throw new Error("No image URL returned from DALL-E");
   } catch (e: any) {
     console.error("[generate-banner] DALL-E error:", e?.message);
