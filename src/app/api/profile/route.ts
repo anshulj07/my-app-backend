@@ -294,6 +294,7 @@ export async function GET(req: Request) {
         // ✅ Services (titles of service-kind events)
         services: Array.isArray(stats?.services) ? stats.services : [],
         isVerified: !!safeDoc.verification?.idVerified,
+        verificationStatus: p.verificationStatus || "unverified",
         onboarding: safeDoc.onboarding ?? null,
       },
       { status: 200, headers: { "Cache-Control": "no-store" } }
