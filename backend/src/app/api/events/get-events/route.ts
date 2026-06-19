@@ -1,0 +1,453 @@
+
+// // app/api/events/get-events/route.ts
+// import { NextResponse } from "next/server";
+// import clientPromise from "../../../../../lib/mongodb";
+
+// function requireApiKey(req: Request) {
+//   const expected = process.env.EVENT_API_KEY;
+//   if (!expected) return null;
+//   const got = req.headers.get("x-api-key");
+//   return got === expected
+//     ? null
+//     : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+// }
+
+// function normKey(s: string) {
+//   return s
+//     .trim()
+//     .toLowerCase()
+//     .replace(/\s+/g, " ")
+//     .replace(/[^\p{L}\p{N}\s-]/gu, "")
+//     .replace(/\s/g, "-");
+// }
+
+// export async function GET(req: Request) {
+//   const auth = requireApiKey(req);
+//   if (auth) return auth;
+
+//   try {
+//     const { searchParams } = new URL(req.url);
+
+//     const limit = Math.min(Number(searchParams.get("limit") || 50), 500);
+
+//     const country = (searchParams.get("country") || "").trim().toUpperCase();
+//     const admin1 = (searchParams.get("admin1") || "").trim();
+//     const city = (searchParams.get("city") || "").trim();
+//     const cityKey = (searchParams.get("cityKey") || (city ? normKey(city) : "")).trim();
+
+//     const nearLatRaw = searchParams.get("nearLat");
+//     const nearLngRaw = searchParams.get("nearLng");
+//     const radiusMRaw = searchParams.get("radiusM");
+
+//     const cursorCreatedAt = searchParams.get("cursorCreatedAt");
+//     const cursorId = searchParams.get("cursorId");
+
+//     const visibility = (searchParams.get("visibility") || "public").trim();
+//     const upcomingOnly = (searchParams.get("upcomingOnly") || "").trim() === "1";
+
+//     // ✅ kind filter support: "free" | "paid" | "service"
+//     const kind = (searchParams.get("kind") || "").trim();
+
+//     const client = await clientPromise;
+//     const db = client.db("assis_auth");
+    
+//     // ✅ Decide which collections to query based on 'kind'
+//     // If kind is 'service', we only look in services.
+//     // If kind is 'free'|'paid', we only look in events.
+//     // If kind is missing/empty, we look in both for the map.
+//     const collectionsToQuery = [];
+//     if (!kind || kind === "service") collectionsToQuery.push(db.collection("services"));
+//     if (!kind || kind === "free" || kind === "paid") collectionsToQuery.push(db.collection("events"));
+
+//     const query: any = {};
+
+//     if (visibility !== "all") query.visibility = visibility;
+
+//     if (country) query["location.countryCode"] = country;
+//     if (admin1) query["location.admin1"] = admin1;
+//     if (cityKey) query["location.cityKey"] = cityKey;
+
+//     // ✅ kind filter
+//     if (kind === "free" || kind === "paid" || kind === "service") query.kind = kind;
+
+//     // ✅ Always exclude ended/deleted events
+//     query.status = { $nin: ["ended", "completed", "deleted"] };
+
+//     // ✅ Smart expiry: hide events that have passed (immediate disappearance on end)
+//     const now = new Date();
+//     if (upcomingOnly) {
+//       query.startsAt = { $gte: now };
+//     } else {
+//       query.$or = [
+//         { endsAt: { $gte: now } }, // Priority 1: Hasn't ended yet
+//         { 
+//           endsAt: { $exists: false }, 
+//           $or: [
+//             { startsAt: { $gte: new Date(Date.now() - 3 * 60 * 60 * 1000) } }, // Fallback: 3h grace if no endsAt
+//             { startsAt: { $exists: false } } // Fallback: Keep if no time set
+//           ]
+//         },
+//       ];
+//     }
+
+//     if (nearLatRaw && nearLngRaw) {
+//       const lat = Number(nearLatRaw);
+//       const lng = Number(nearLngRaw);
+//       if (Number.isFinite(lat) && Number.isFinite(lng)) {
+//         const radiusM = radiusMRaw ? Number(radiusMRaw) : undefined;
+//         query["location.geo"] = {
+//           $near: {
+//             $geometry: { type: "Point", coordinates: [lng, lat] },
+//             ...(radiusM && Number.isFinite(radiusM) ? { $maxDistance: radiusM } : {}),
+//           },
+//         };
+//       }
+//     }
+
+//     if (cursorCreatedAt && cursorId) {
+//       let cursorDate: Date | null = null;
+//       try {
+//         cursorDate = new Date(cursorCreatedAt);
+//         if (!Number.isFinite(cursorDate.getTime())) cursorDate = null;
+//       } catch {
+//         cursorDate = null;
+//       }
+//       if (cursorDate) {
+//         query.createdAt = { $lt: cursorDate };
+//       }
+//     }
+
+//     // ✅ Fetch from all relevant collections in parallel
+//     const results = await Promise.all(
+//       collectionsToQuery.map(col => 
+//         col.find(query)
+//            .sort({ createdAt: -1, _id: -1 })
+//            .limit(limit)
+//            .toArray()
+//       )
+//     );
+
+//     // ✅ Merge and re-sort
+//     const docs = results.flat()
+//       .sort((a: any, b: any) => {
+//         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+//         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+//         return dateB - dateA;
+//       })
+//       .slice(0, limit);
+
+//     // ✅ Post-fetch: filter events using date+time string fields (fallback for old docs)
+//     const nowTs = Date.now();
+//     const filteredDocs = docs.filter((e: any) => {
+//       // Priority 1: Use endsAt/startsAt if they exist (already handled by DB, but good to double check)
+//       if (e.endsAt) return new Date(e.endsAt).getTime() >= nowTs;
+//       if (e.startsAt) return new Date(e.startsAt).getTime() >= nowTs - 3 * 60 * 60 * 1000;
+
+//       // Fallback: parse date+time string
+//       const date = String(e.date || "").trim();
+//       const time = String(e.time || "").trim();
+//       const endTime = String(e.endTime || "").trim();
+
+//       if (!date) return true; // no date = keep
+
+//       let endMs = 0;
+//       if (endTime) {
+//         endMs = new Date(`${date}T${endTime}:00Z`).getTime();
+//       } else if (time) {
+//         endMs = new Date(`${date}T${time}:00Z`).getTime() + 3 * 60 * 60 * 1000; // 3h default
+//       } else {
+//         endMs = new Date(`${date}T23:59:59Z`).getTime();
+//       }
+
+//       if (!Number.isFinite(endMs)) return true;
+//       return endMs >= nowTs;
+//     });
+
+//     // ✅ Return all fields needed by map pins + sheets
+//     const allCreatorIds = Array.from(new Set(filteredDocs.map((e: any) => e.creatorClerkId))).filter(Boolean);
+    
+//     const usersData = await db.collection("users").find(
+//       { clerkUserId: { $in: allCreatorIds } },
+//       { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar.url": 1, "clerk.firstName": 1, "clerk.lastName": 1 } }
+//     ).toArray();
+
+//     const userMap = new Map(usersData.map(u => {
+//       const f = u.profile?.firstName || u.clerk?.firstName || "";
+//       const l = u.profile?.lastName || u.clerk?.lastName || "";
+//       return [
+//         u.clerkUserId,
+//         { name: `${f} ${l}`.trim() || "User", avatar: u.profile?.avatar?.url || "" }
+//       ];
+//     }));
+
+//     const events = filteredDocs.map((e: any) => {
+//       const creator = userMap.get(String(e.creatorClerkId || ""));
+//       return {
+//         ...e,
+//         _id: e._id.toString(),
+//         creatorName: (e.creatorName && e.creatorName !== "Local Host") 
+//           ? e.creatorName 
+//           : (creator?.name || "Local Host"),
+//         creatorAvatar: creator?.avatar || e.creatorAvatar || "",
+//         // Ensure lat/lng are at top level for MapView
+//         lat: e.location?.lat ?? null,
+//         lng: e.location?.lng ?? null,
+//       };
+//     });
+
+//     const last = filteredDocs[filteredDocs.length - 1];
+//     const nextCursor = last
+//       ? {
+//           cursorCreatedAt: (last.createdAt ? new Date(last.createdAt) : new Date()).toISOString(),
+//           cursorId: last._id.toString(),
+//         }
+//       : null;
+
+//     return NextResponse.json({ ok: true, events, nextCursor });
+//   } catch (e: any) {
+//     return NextResponse.json(
+//       { error: "Server error", detail: e?.message ?? "" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
+
+
+
+// app/api/events/get-events/route.ts
+// ✅ BUG FIX: $and aur $or conflict fix kiya
+// Admin moderation filter: sirf approved events MyApp pe dikhao
+// Purane events (admin_status field nahi) bhi dikhte rahenge
+
+import { NextResponse } from "next/server";
+import clientPromise from "../../../../../lib/mongodb";
+
+function requireApiKey(req: Request) {
+  const expected = process.env.EVENT_API_KEY;
+  if (!expected) return null;
+  const got = req.headers.get("x-api-key");
+  return got === expected
+    ? null
+    : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+function normKey(s: string) {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s/g, "-");
+}
+
+export async function GET(req: Request) {
+  const auth = requireApiKey(req);
+  if (auth) return auth;
+
+  try {
+    const { searchParams } = new URL(req.url);
+
+    const limit = Math.min(Number(searchParams.get("limit") || 50), 500);
+
+    const country = (searchParams.get("country") || "").trim().toUpperCase();
+    const admin1 = (searchParams.get("admin1") || "").trim();
+    const city = (searchParams.get("city") || "").trim();
+    const cityKey = (searchParams.get("cityKey") || (city ? normKey(city) : "")).trim();
+
+    const nearLatRaw = searchParams.get("nearLat");
+    const nearLngRaw = searchParams.get("nearLng");
+    const radiusMRaw = searchParams.get("radiusM");
+
+    const cursorCreatedAt = searchParams.get("cursorCreatedAt");
+    const cursorId = searchParams.get("cursorId");
+
+    const visibility = (searchParams.get("visibility") || "public").trim();
+    const upcomingOnly = (searchParams.get("upcomingOnly") || "").trim() === "1";
+
+    const kind = (searchParams.get("kind") || "").trim();
+
+    const client = await clientPromise;
+    const db = client.db("assis_auth");
+
+    const collectionsToQuery = [];
+    if (!kind || kind === "service") collectionsToQuery.push(db.collection("services"));
+    if (!kind || kind === "free" || kind === "paid") collectionsToQuery.push(db.collection("events"));
+
+    const query: any = {};
+
+    if (visibility !== "all") query.visibility = visibility;
+
+    if (country) query["location.countryCode"] = country;
+    if (admin1) query["location.admin1"] = admin1;
+    if (cityKey) query["location.cityKey"] = cityKey;
+
+    if (kind === "free" || kind === "paid" || kind === "service") query.kind = kind;
+
+    // ─── MODERATION FILTER ────────────────────────────────────────────────────
+    // ✅ BUG FIX: $and use karo taaki $or conflict na ho
+    // Ye sab conditions ek saath kaam karengi:
+    //   1. status ended/completed/deleted nahi hona chahiye
+    //   2. admin_status "approved" hona chahiye YA field exist nahi karna chahiye (purane events)
+    //   3. time-based expiry filter
+    //
+    // GALAT TARIKA (pehle wala — conflict hota tha):
+    //   query.status = { $nin: [...] }
+    //   query.$and = [{ $or: [...admin filter] }]
+    //   query.$or = [{ endsAt... }]  ← ye $and ke $or ko overwrite kar deta tha!
+    //
+    // SAHI TARIKA: saari conditions $and ke andar daalo
+    const andConditions: any[] = [];
+
+    // Condition 1: ended/deleted events hide karo
+    andConditions.push({
+      status: { $nin: ["ended", "completed", "deleted"] }
+    });
+
+    // Condition 2: admin moderation filter
+    // "approved" → dikhao | field nahi hai (purane events) → dikhao | "pending"/"rejected" → mat dikhao
+    andConditions.push({
+      $or: [
+        { admin_status: "approved" },
+        { admin_status: { $exists: false } },
+      ]
+    });
+
+    // Condition 3: time-based expiry filter
+    const now = new Date();
+    if (upcomingOnly) {
+      andConditions.push({ startsAt: { $gte: now } });
+    } else {
+      andConditions.push({
+        $or: [
+          { endsAt: { $gte: now } },
+          {
+            endsAt: { $exists: false },
+            $or: [
+              { startsAt: { $gte: new Date(Date.now() - 3 * 60 * 60 * 1000) } },
+              { startsAt: { $exists: false } }
+            ]
+          },
+        ]
+      });
+    }
+
+    // Saari conditions $and mein daal do
+    query.$and = andConditions;
+    // ─────────────────────────────────────────────────────────────────────────
+
+    if (nearLatRaw && nearLngRaw) {
+      const lat = Number(nearLatRaw);
+      const lng = Number(nearLngRaw);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        const radiusM = radiusMRaw ? Number(radiusMRaw) : undefined;
+        query["location.geo"] = {
+          $near: {
+            $geometry: { type: "Point", coordinates: [lng, lat] },
+            ...(radiusM && Number.isFinite(radiusM) ? { $maxDistance: radiusM } : {}),
+          },
+        };
+      }
+    }
+
+    if (cursorCreatedAt && cursorId) {
+      let cursorDate: Date | null = null;
+      try {
+        cursorDate = new Date(cursorCreatedAt);
+        if (!Number.isFinite(cursorDate.getTime())) cursorDate = null;
+      } catch {
+        cursorDate = null;
+      }
+      if (cursorDate) {
+        query.createdAt = { $lt: cursorDate };
+      }
+    }
+
+    const results = await Promise.all(
+      collectionsToQuery.map(col =>
+        col.find(query)
+           .sort({ createdAt: -1, _id: -1 })
+           .limit(limit)
+           .toArray()
+      )
+    );
+
+    const docs = results.flat()
+      .sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, limit);
+
+    // Post-fetch time filter (fallback for old docs without startsAt/endsAt)
+    const nowTs = Date.now();
+    const filteredDocs = docs.filter((e: any) => {
+      if (e.endsAt) return new Date(e.endsAt).getTime() >= nowTs;
+      if (e.startsAt) return new Date(e.startsAt).getTime() >= nowTs - 3 * 60 * 60 * 1000;
+
+      const date = String(e.date || "").trim();
+      const time = String(e.time || "").trim();
+      const endTime = String(e.endTime || "").trim();
+
+      if (!date) return true;
+
+      let endMs = 0;
+      if (endTime) {
+        endMs = new Date(`${date}T${endTime}:00Z`).getTime();
+      } else if (time) {
+        endMs = new Date(`${date}T${time}:00Z`).getTime() + 3 * 60 * 60 * 1000;
+      } else {
+        endMs = new Date(`${date}T23:59:59Z`).getTime();
+      }
+
+      if (!Number.isFinite(endMs)) return true;
+      return endMs >= nowTs;
+    });
+
+    const allCreatorIds = Array.from(new Set(filteredDocs.map((e: any) => e.creatorClerkId))).filter(Boolean);
+
+    const usersData = await db.collection("users").find(
+      { clerkUserId: { $in: allCreatorIds } },
+      { projection: { clerkUserId: 1, "profile.firstName": 1, "profile.lastName": 1, "profile.avatar.url": 1, "clerk.firstName": 1, "clerk.lastName": 1 } }
+    ).toArray();
+
+    const userMap = new Map(usersData.map(u => {
+      const f = u.profile?.firstName || u.clerk?.firstName || "";
+      const l = u.profile?.lastName || u.clerk?.lastName || "";
+      return [
+        u.clerkUserId,
+        { name: `${f} ${l}`.trim() || "User", avatar: u.profile?.avatar?.url || "" }
+      ];
+    }));
+
+    const events = filteredDocs.map((e: any) => {
+      const creator = userMap.get(String(e.creatorClerkId || ""));
+      return {
+        ...e,
+        _id: e._id.toString(),
+        creatorName: (e.creatorName && e.creatorName !== "Local Host")
+          ? e.creatorName
+          : (creator?.name || "Local Host"),
+        creatorAvatar: creator?.avatar || e.creatorAvatar || "",
+        lat: e.location?.lat ?? null,
+        lng: e.location?.lng ?? null,
+      };
+    });
+
+    const last = filteredDocs[filteredDocs.length - 1];
+    const nextCursor = last
+      ? {
+          cursorCreatedAt: (last.createdAt ? new Date(last.createdAt) : new Date()).toISOString(),
+          cursorId: last._id.toString(),
+        }
+      : null;
+
+    return NextResponse.json({ ok: true, events, nextCursor });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: "Server error", detail: e?.message ?? "" },
+      { status: 500 }
+    );
+  }
+}
