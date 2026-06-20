@@ -31,6 +31,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/payment/create-order(.*)",
   "/api/payment/verify(.*)",
   "/api/uploadthing(.*)", // ✅ NEW — Make UploadThing public so frontend can upload images
+  "/api/events/upload-banner(.*)", // ✅ NEW - allow frontend to upload banner without clerk token
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
@@ -42,7 +43,7 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   return res;
 });
 
-export default function proxy(req: NextRequest) {
+export default function middleware(req: NextRequest) {
   if (req.method === "OPTIONS") {
     return new NextResponse(null, { status: 200, headers: corsHeaders });
   }
