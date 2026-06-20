@@ -24,12 +24,13 @@ const isPublicRoute = createRouteMatcher([
   "/api/onboarding/photos(.*)",
   "/api/onboarding/gender(.*)",
   "/api/onboarding/dateOfBirth(.*)",
-  "/api/onboarding/status(.*)",    // ✅ NEW — Status monitoring for mobile apps
-  "/api/events/get-events(.*)",    // ✅ NEW — Fetching events for explore screen
-  "/api/events/notifications(.*)", // ✅ NEW — Fetching notifications
-  "/api/profile(.*)",              // ✅ NEW — Generic profile fetching (using x-api-key)
+  "/api/onboarding/status(.*)",
+  "/api/events/get-events(.*)",
+  "/api/events/notifications(.*)",
+  "/api/profile(.*)",
   "/api/payment/create-order(.*)",
   "/api/payment/verify(.*)",
+  "/api/uploadthing(.*)", // ✅ NEW — Make UploadThing public so frontend can upload images
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
