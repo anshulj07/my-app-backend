@@ -32,6 +32,10 @@ const isPublicRoute = createRouteMatcher([
   "/api/payment/verify(.*)",
   "/api/uploadthing(.*)", // ✅ NEW — Make UploadThing public so frontend can upload images
   "/api/events/upload-banner(.*)", // ✅ NEW - allow frontend to upload banner without clerk token
+  "/api/events/create-event(.*)",
+  "/api/events/(.*)", // ✅ NEW - expose all event routes
+  "/api/users/(.*)", // ✅ NEW - expose users routes
+  "/api/reviews/(.*)", // ✅ NEW - expose reviews routes
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
