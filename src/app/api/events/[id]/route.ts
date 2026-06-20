@@ -81,7 +81,8 @@ export async function GET(req: Request, context: Ctx) {
         "profile.photos": 1, 
         "clerk.firstName": 1, 
         "clerk.lastName": 1,
-        "clerk.imageUrl": 1
+        "clerk.imageUrl": 1,
+        "profile.verificationStatus": 1
       } 
     }
   ).toArray();
@@ -96,10 +97,11 @@ export async function GET(req: Request, context: Ctx) {
     const getStr = (val: any) => (typeof val === "string" ? val : val?.url || null);
     const photo0 = Array.isArray(u.profile?.photos) ? getStr(u.profile.photos[0]) : null;
     const avatar = getStr(u.profile?.avatar) || u.clerk?.imageUrl || photo0 || "";
+    const isVerified = u.profile?.verificationStatus === "verified";
 
     return [
       u.clerkUserId,
-      { name: name || "User", avatar }
+      { name: name || "User", avatar, isVerified }
     ];
   }));
 
@@ -110,15 +112,23 @@ export async function GET(req: Request, context: Ctx) {
     console.warn(`[GET /api/events/${id}] NO USER DATA FOUND for creator: ${doc.creatorClerkId}`);
   }
 
-  const enrichedAttendees = attendees.map((a: any) => ({
-    ...a,
-    imageUrl: a.imageUrl || userMap.get(String(a.clerkId || a.clerkUserId || ""))?.avatar || ""
-  }));
+  const enrichedAttendees = attendees.map((a: any) => {
+    const u = userMap.get(String(a.clerkId || a.clerkUserId || ""));
+    return {
+      ...a,
+      imageUrl: a.imageUrl || u?.avatar || "",
+      isVerified: !!u?.isVerified
+    };
+  });
 
-  const enrichedPending = pending.map((p: any) => ({
-    ...p,
-    imageUrl: p.imageUrl || userMap.get(String(p.clerkUserId || ""))?.avatar || ""
-  }));
+  const enrichedPending = pending.map((p: any) => {
+    const u = userMap.get(String(p.clerkUserId || ""));
+    return {
+      ...p,
+      imageUrl: p.imageUrl || u?.avatar || "",
+      isVerified: !!u?.isVerified
+    };
+  });
 
   return NextResponse.json({
     ok: true,
@@ -129,6 +139,7 @@ export async function GET(req: Request, context: Ctx) {
         ? doc.creatorName 
         : (creatorInfo?.name || "Local Host"),
       creatorAvatar: creatorInfo?.avatar || doc.creatorAvatar || "",
+      isVerified: !!creatorInfo?.isVerified,
       attendees: enrichedAttendees,
       pendingRequests: enrichedPending
     }

@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
         "profile.avatar":    1,
         "profile.photos":    1,
         "profile.about":     1,
+        "profile.verificationStatus": 1,
         "clerk.firstName":   1,
         "clerk.lastName":    1,
         "clerk.imageUrl":    1,
@@ -76,6 +77,7 @@ export async function GET(req: NextRequest) {
           avatar:    avatar || firstPhoto,
           photos:    firstPhoto ? [firstPhoto] : [],
           about:     u.profile?.about || "",
+          isVerified: u.profile?.verificationStatus === "verified",
         },
         clerk: {
           firstName: u.clerk?.firstName || "",

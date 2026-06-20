@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
           .project({
             clerkUserId: 1,
             "profile.firstName": 1, "profile.lastName": 1,
-            "profile.avatar": 1,   "profile.photos": 1,
+            "profile.avatar": 1,   "profile.photos": 1, "profile.verificationStatus": 1,
             "clerk.firstName": 1,  "clerk.lastName": 1, "clerk.imageUrl": 1,
           })
           .toArray()
@@ -93,11 +93,13 @@ export async function GET(req: NextRequest) {
         const getStr = (val: any) => (typeof val === "string" ? val : val?.url || null);
         const rawAvatar = profile.avatar || profile.photos?.[0] || clerkData.imageUrl || null;
         const avatar = getStr(rawAvatar);
+        const isVerified = profile.verificationStatus === "verified";
 
         return {
           otherUserId:   conv.otherId,
           otherName:     name,
           otherAvatar:   avatar || "",
+          isVerified:    isVerified,
           lastMessage:   conv.lastMessage,
           lastMessageAt: conv.lastMessageAt,
           unreadCount:   conv.unreadCount,
