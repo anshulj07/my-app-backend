@@ -36,6 +36,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/events/(.*)", // ✅ NEW - expose all event routes
   "/api/users/(.*)", // ✅ NEW - expose users routes
   "/api/reviews/(.*)", // ✅ NEW - expose reviews routes
+  "/api/bookings/(.*)", // ✅ NEW - expose bookings routes
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
