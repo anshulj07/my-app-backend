@@ -87,10 +87,17 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    const ev = await db.collection("events").findOne(
+    let ev = await db.collection("events").findOne(
       { _id: new ObjectId(eventId) },
       { projection: { "attendees": 1, "pendingRequests": 1 } }
     );
+
+    if (!ev) {
+      ev = await db.collection("services").findOne(
+        { _id: new ObjectId(eventId) },
+        { projection: { "attendees": 1, "pendingRequests": 1 } }
+      );
+    }
 
     if (!ev) return NextResponse.json({ ok: true, joined: false, pending: false }, { status: 200 });
 
@@ -135,14 +142,19 @@ export async function GET(req: Request) {
 
     // ✅ NEW: Verify if there's a payment_pending booking. 
     // If so, we are NOT 'pending' in terms of approval flow (we are unpaid).
+    // BUT if it's 'paid_pending_approval', we ARE pending approval.
     const unpaidBooking = await db.collection("bookings").findOne({
       bookerId: clerkUserId,
       eventId: eventId,
-      status: "payment_pending"
+      status: { $in: ["payment_pending", "paid_pending_approval"] }
     });
 
     if (unpaidBooking) {
-      isPending = false;
+      if (unpaidBooking.status === "payment_pending") {
+        isPending = false; // They haven't paid yet, so they shouldn't show as 'Waiting for Approval'
+      } else if (unpaidBooking.status === "paid_pending_approval") {
+        isPending = true; // They paid, waiting for host to approve
+      }
     }
 
     return NextResponse.json({

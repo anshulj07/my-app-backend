@@ -65,7 +65,14 @@ export async function POST(req: Request) {
     // We check the event's join policy. If it's 'approval', we don't 'confirm' (admit)
     // the user yet, even though they paid. They stay in a 'paid_pending_approval' state.
     
-    const ev = await db.collection("events").findOne({ _id: new ObjectId(booking.eventId) });
+    let ev = await db.collection("events").findOne({ _id: new ObjectId(booking.eventId) });
+    let parentCol = "events";
+
+    if (!ev) {
+      ev = await db.collection("services").findOne({ _id: new ObjectId(booking.eventId) });
+      parentCol = "services";
+    }
+
     const joinPolicy = ev?.joinPolicy || "open";
     const statusAfterPayment = joinPolicy === "approval" ? "paid_pending_approval" : "confirmed";
 
@@ -113,7 +120,7 @@ export async function POST(req: Request) {
          * The user has paid, but the host still needs to admit them.
          * We update the existing pending request to mark it as 'paid'.
          */
-        await db.collection("events").updateOne(
+        await db.collection(parentCol).updateOne(
           { _id: new ObjectId(eventId), "pendingRequests.clerkUserId": booking.bookerId },
           { 
             $set: { 
@@ -154,7 +161,7 @@ export async function POST(req: Request) {
           isPaid:            true, // Clearly it's paid
         };
 
-        await db.collection("events").updateOne(
+        await db.collection(parentCol).updateOne(
           { _id: new ObjectId(eventId) },
           {
             $pull: { pendingRequests: { clerkUserId: booking.bookerId } } as any,

@@ -612,13 +612,20 @@ export async function PATCH(req: Request) {
     // ✅ Identify the correct collection: search both 'events' and 'services'
     let col = db.collection("events");
     let target = await col.findOne(findQuery);
+    let isServiceCol = false;
+
     if (!target) {
       col = db.collection("services");
       target = await col.findOne(findQuery);
+      isServiceCol = true;
     }
 
     if (!target) {
       return NextResponse.json({ error: "Event not found or you are not the creator" }, { status: 404 });
+    }
+
+    if (isServiceCol) {
+      $set.joinPolicy = "approval";
     }
 
     const upd = await col.updateOne(findQuery, { $set });

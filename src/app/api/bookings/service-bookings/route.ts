@@ -17,41 +17,40 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const eventId = (searchParams.get("eventId") || "").trim();
-    const creatorClerkId = (searchParams.get("creatorClerkId") || "").trim();
+    const date = (searchParams.get("date") || "").trim();
 
     if (!eventId) return NextResponse.json({ error: "eventId is required" }, { status: 400 });
-    if (!creatorClerkId) return NextResponse.json({ error: "creatorClerkId is required" }, { status: 400 });
 
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    const ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
-    if (!ev) return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    if (String(ev.creatorClerkId || "") !== creatorClerkId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    let ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
+    if (!ev) {
+      ev = await db.collection("services").findOne({ _id: new ObjectId(eventId) });
     }
-    if (String(ev.kind || "") !== "service") {
-      return NextResponse.json({ error: "Not a service event" }, { status: 400 });
-    }
+    
+    if (!ev) return NextResponse.json({ error: "Event/Service not found" }, { status: 404 });
 
-    // bookings schema assumed:
-    // { eventId: string, whenISO: string, customerName, customerEmail, customerClerkId, notes }
+    const query: any = { 
+      eventId: eventId,
+      status: { $in: ["confirmed", "payment_pending", "paid_pending_approval"] } 
+    };
+    if (date) query.startDate = date;
+
     const bookings = await db
       .collection("bookings")
-      .find({ eventId: eventId })
-      .sort({ whenISO: 1 })
-      .limit(2000)
+      .find(query)
+      .project({ startTime: 1, duration: 1, startDate: 1, endDate: 1 })
       .toArray();
 
     return NextResponse.json({
       ok: true,
       bookings: bookings.map((b: any) => ({
         _id: b._id.toString(),
-        whenISO: b.whenISO || "",
-        customerClerkId: b.customerClerkId || "",
-        customerName: b.customerName || "",
-        customerEmail: b.customerEmail || "",
-        notes: b.notes || "",
+        startTime: b.startTime || "",
+        duration: b.duration || 1,
+        startDate: b.startDate || "",
+        endDate: b.endDate || ""
       })),
     });
   } catch (e: any) {

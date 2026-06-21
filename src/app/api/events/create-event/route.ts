@@ -52,8 +52,8 @@
 //       kind,                         // ✅ normalized: "free" | "paid" | "service"
 //       priceCents: kind === "free" ? null : (payload.priceCents ?? null),
 
-//       // ✅ joinPolicy — "open" (direct join) or "approval" (host must approve)
-//       joinPolicy: (payload as any).joinPolicy ?? "open",
+//       // ✅ joinPolicy — "approval" for all services, or payload fallback for events
+//       joinPolicy: kind === "service" ? "approval" : ((payload as any).joinPolicy ?? "open"),
 
 //       // ✅ attendance/capacity limit — frontend may send as "capacity" or "attendance"
 //       attendance: (payload as any).capacity ?? payload.attendance ?? null,
@@ -277,7 +277,7 @@ export async function POST(req: Request) {
       creatorName:    body.creatorName || "Local Host",
       kind:           data.kind ?? "free",
       priceCents:     data.priceCents ?? null,
-      joinPolicy:     data.joinPolicy ?? "open",
+      joinPolicy:     data.kind === "service" ? "approval" : (data.joinPolicy ?? "open"),
       attendance:     effectiveCapacity,
       capacity:       effectiveCapacity,
       attendees:      [],

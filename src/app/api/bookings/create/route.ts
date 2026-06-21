@@ -143,16 +143,16 @@ export async function POST(req: Request) {
     // Events allow multiple attendees — skip conflict check for event type
     // ── Check host availability ─────────────────────────────────────────────
     if (type === "service" && eventId && startTime) {
-       // Granular check for services
+       // Allow overriding if the conflicting booking is just a stale payment_pending or belongs to the same user
+       const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
        const requestedStart = parseInt(startTime.split(":")[0]);
        const requestedEnd = requestedStart + (duration || 1);
 
-       const conflicting = await db.collection("bookings").findOne({
+       const conflicting = await db.collection("bookings").find({
          eventId,
          status: { $in: ["confirmed", "pending", "payment_pending"] },
          startDate, // same day
          $or: [
-           // Overlap logic: (StartA < EndB) && (EndA > StartB)
            {
              $expr: {
                $and: [
@@ -162,11 +162,32 @@ export async function POST(req: Request) {
              }
            }
          ]
-       } as any);
+       }).toArray();
 
-       if (conflicting) {
-         return NextResponse.json({ error: "This time slot is already booked." }, { status: 409 });
+       // Check if any conflicting booking is truly blocking
+       const trulyBlocking = conflicting.find(b => {
+         if (b.status === "confirmed" || b.status === "pending") return true;
+         // If payment_pending:
+         if (b.status === "payment_pending") {
+           // If it's another user, hold it for 10 minutes max
+           if (b.bookerId !== bookerId && b.createdAt > tenMinsAgo) return true;
+           // If it's the SAME user, it means they abandoned the previous payment attempt, so don't block them from trying again!
+           return false; 
+         }
+         return false;
+       });
+
+       if (trulyBlocking) {
+         return NextResponse.json({ error: "This time slot is already booked or someone is currently paying for it." }, { status: 409 });
        }
+       
+       // Clean up the user's own abandoned payment_pending bookings for this slot to avoid clutter
+       await db.collection("bookings").deleteMany({
+         bookerId,
+         eventId,
+         status: "payment_pending",
+         startDate
+       });
     } else if (type === "person") {
       // Whole day check for person bookings
       const conflicting = await db.collection("bookings").findOne({
@@ -244,7 +265,7 @@ export async function POST(req: Request) {
     const bookingId = result.insertedId.toString();
 
     // ── Sync with correct collection (so it shows in 'Going' tab as pending) ──
-    if (type === "event" && eventId) {
+    if ((type === "event" || type === "service") && eventId) {
       const parentCol = eventDoc.kind === "service" ? "services" : "events";
       
       // ✅ Prevent duplicate entries for the same user in pendingRequests

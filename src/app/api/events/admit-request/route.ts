@@ -39,9 +39,15 @@ export async function POST(req: Request) {
 
     const client = await clientPromise;
     const db = client.db("assis_auth");
-    const ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
+    let ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
+    let parentCol = "events";
 
-    if (!ev) return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    if (!ev) {
+      ev = await db.collection("services").findOne({ _id: new ObjectId(eventId) });
+      parentCol = "services";
+    }
+
+    if (!ev) return NextResponse.json({ error: "Event/Service not found" }, { status: 404 });
     if (String((ev as any).creatorClerkId) !== creatorClerkId)
       return NextResponse.json({ error: "Only creator can admit/reject" }, { status: 403 });
 
@@ -51,7 +57,7 @@ export async function POST(req: Request) {
 
     // ── 1. CLEANUP PENDING LIST ──────────────────────────────────────────────
     // Always remove from pending regardless of admit or reject outcome.
-    await db.collection("events").updateOne(
+    await db.collection(parentCol).updateOne(
       { _id: new ObjectId(eventId) },
       { $pull: { pendingRequests: { clerkUserId: requestClerkUserId } } } as any
     );
@@ -71,7 +77,7 @@ export async function POST(req: Request) {
       const realImageUrl = profile?.avatar?.url || req_data.imageUrl || "";
 
       // Add to confirmed attendees list
-      await db.collection("events").updateOne(
+      await db.collection(parentCol).updateOne(
         { _id: new ObjectId(eventId) },
         {
           $push: {
