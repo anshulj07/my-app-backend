@@ -11,6 +11,14 @@ const PatchSchema = z.object({
   time: z.string().optional(),
   lat: z.number().finite().optional(),
   lng: z.number().finite().optional(),
+  description: z.string().optional(),
+  bannerUri: z.string().optional(),
+  recurringSchedule: z.array(z.any()).optional(),
+  recurringDays: z.array(z.number()).optional(),
+  bookingWindowDays: z.number().nullable().optional(),
+  dailyCapacity: z.number().nullable().optional(),
+  joinPolicy: z.string().optional(),
+  status: z.string().optional(),
 });
 
 function requireApiKey(req: Request) {

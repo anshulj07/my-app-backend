@@ -84,12 +84,20 @@ export async function GET(req: Request) {
             { endsAt: null, startsAt: { $exists: false } },                  // No time set at all — keep
             { endsAt: { $exists: false }, startsAt: { $gte: threeHoursAgo } }, // endsAt missing, started within 3h
             { endsAt: { $exists: false }, startsAt: { $exists: false } },    // No dates at all — keep
+            { kind: "recurring" },                                           // Perpetual recurring activities
           ],
         };
 
+    const includePausedFor = (searchParams.get("includePausedFor") || "").trim();
+
     // Merge status + time filters using $and so they don't override each other
     query.$and = [
-      { status: { $nin: ["ended", "completed", "deleted"] } },
+      {
+        $or: [
+          { status: { $nin: ["ended", "completed", "deleted", "paused"] } },
+          ...(includePausedFor ? [{ status: "paused", creatorClerkId: includePausedFor }] : [])
+        ]
+      },
       timeFilter,
     ];
 

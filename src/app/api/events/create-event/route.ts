@@ -230,6 +230,17 @@ function requireApiKey(req: Request) {
     : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export async function POST(req: Request) {
   const auth = requireApiKey(req);
   if (auth) return auth;
@@ -277,6 +288,8 @@ export async function POST(req: Request) {
       creatorName:    body.creatorName || "Local Host",
       kind:           data.kind ?? "free",
       priceCents:     data.priceCents ?? null,
+      recurringDays:  data.recurringDays ?? [],
+      recurringSchedule: data.recurringSchedule ?? [],
       joinPolicy:     data.joinPolicy ?? "open",
       attendance:     effectiveCapacity,
       capacity:       effectiveCapacity,
@@ -313,14 +326,31 @@ export async function POST(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Check if the user is verified before allowing event creation
+    // ✅ Check verification and travel practicality
     const userDoc = await db.collection("users").findOne({ clerkUserId: creatorClerkId });
-    if (!userDoc?.verification?.idVerified) {
+    const isVerified = !!userDoc?.verification?.idVerified;
+
+    const userCurrentLocation = body.userCurrentLocation;
+    if (!userCurrentLocation || !Number.isFinite(userCurrentLocation.lat)) {
       return NextResponse.json(
-        { error: "Only verified users can create events. Please complete your identity verification in the profile tab." },
+        { error: "Your current location is required to create an event. Please enable location permissions." },
+        { status: 400 }
+      );
+    }
+
+    const distanceKm = getDistanceKm(
+      userCurrentLocation.lat, userCurrentLocation.lng,
+      data.location.lat, data.location.lng
+    );
+
+    // Rule 1: Unverified users limited to 100km
+    if (!isVerified && distanceKm > 100) {
+      return NextResponse.json(
+        { error: `Unverified users can only create events within 100 km of their current location. (Distance: ${distanceKm.toFixed(1)} km). Please complete your identity verification to create events anywhere.` },
         { status: 403 }
       );
     }
+
 
     const result = await db.collection("events").insertOne(doc);
     const eventId = result.insertedId.toString();
@@ -346,6 +376,7 @@ export async function POST(req: Request) {
         ok: true,
         eventId,
         event: { ...doc, _id: eventId },
+        distanceKm,
       },
       { status: 201 }
     );
