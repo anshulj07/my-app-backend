@@ -277,7 +277,7 @@ export async function POST(req: Request) {
       creatorName:    body.creatorName || "Local Host",
       kind:           data.kind ?? "free",
       priceCents:     data.priceCents ?? null,
-      joinPolicy:     data.kind === "service" ? "approval" : (data.joinPolicy ?? "open"),
+      joinPolicy:     data.joinPolicy ?? "open",
       attendance:     effectiveCapacity,
       capacity:       effectiveCapacity,
       attendees:      [],
@@ -310,13 +310,19 @@ export async function POST(req: Request) {
     if (startsAt) doc.startsAt = startsAt;
     if (endsAt)   doc.endsAt   = endsAt;
 
-    // ── Insert document into correct collection ─────────────────────────────
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Split collection logic: 'services' for kind service, else 'events'
-    const targetCollection = doc.kind === "service" ? "services" : "events";
-    const result = await db.collection(targetCollection).insertOne(doc);
+    // ✅ Check if the user is verified before allowing event creation
+    const userDoc = await db.collection("users").findOne({ clerkUserId: creatorClerkId });
+    if (!userDoc?.verification?.idVerified) {
+      return NextResponse.json(
+        { error: "Only verified users can create events. Please complete your identity verification in the profile tab." },
+        { status: 403 }
+      );
+    }
+
+    const result = await db.collection("events").insertOne(doc);
     const eventId = result.insertedId.toString();
 
     // ── Update user_stats: increment eventsHosted ─────────────────────────────

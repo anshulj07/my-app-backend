@@ -198,11 +198,8 @@ export async function GET(req: Request) {
         .filter(Boolean);
       
       if (missingIds.length > 0) {
-        const [extraEvents, extraServices] = await Promise.all([
-          db.collection("events").find({ _id: { $in: missingIds } } as any).toArray(),
-          db.collection("services").find({ _id: { $in: missingIds } } as any).toArray(),
-        ]);
-        extraJoinedDocs = [...extraEvents, ...extraServices];
+        const extraEvents = await db.collection("events").find({ _id: { $in: missingIds } } as any).toArray();
+        extraJoinedDocs = [...extraEvents];
       }
     }
 

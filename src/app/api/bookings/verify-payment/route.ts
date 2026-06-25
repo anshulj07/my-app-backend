@@ -68,10 +68,7 @@ export async function POST(req: Request) {
     let ev = await db.collection("events").findOne({ _id: new ObjectId(booking.eventId) });
     let parentCol = "events";
 
-    if (!ev) {
-      ev = await db.collection("services").findOne({ _id: new ObjectId(booking.eventId) });
-      parentCol = "services";
-    }
+
 
     const joinPolicy = ev?.joinPolicy || "open";
     const statusAfterPayment = joinPolicy === "approval" ? "paid_pending_approval" : "confirmed";

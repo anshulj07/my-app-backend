@@ -121,6 +121,7 @@ export async function GET(req: NextRequest) {
           { fromClerkUserId: from, toClerkUserId: to },
           { fromClerkUserId: to,   toClerkUserId: from },
         ],
+        deletedFor: { $ne: from }
       })
       .sort({ createdAt: 1 })
       .limit(limit)
@@ -202,6 +203,41 @@ export async function POST(req: NextRequest) {
     }, { status: 201 });
   } catch (e: any) {
     console.error("[POST /api/messages]", e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const authErr = checkApiKey(req);
+  if (authErr) return authErr;
+
+  let body: any;
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const { fromClerkUserId, toClerkUserId } = body;
+  if (!fromClerkUserId || !toClerkUserId) {
+    return NextResponse.json({ error: "fromClerkUserId and toClerkUserId are required" }, { status: 400 });
+  }
+
+  try {
+    const client = await clientPromise;
+    const db     = client.db(DB);
+
+    await db.collection(COLL).updateMany(
+      {
+        $or: [
+          { fromClerkUserId, toClerkUserId },
+          { fromClerkUserId: toClerkUserId, toClerkUserId: fromClerkUserId },
+        ]
+      },
+      { $addToSet: { deletedFor: fromClerkUserId } }
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    console.error("[DELETE /api/messages]", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

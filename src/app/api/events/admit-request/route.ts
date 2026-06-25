@@ -42,12 +42,7 @@ export async function POST(req: Request) {
     let ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
     let parentCol = "events";
 
-    if (!ev) {
-      ev = await db.collection("services").findOne({ _id: new ObjectId(eventId) });
-      parentCol = "services";
-    }
-
-    if (!ev) return NextResponse.json({ error: "Event/Service not found" }, { status: 404 });
+    if (!ev) return NextResponse.json({ error: "Event not found" }, { status: 404 });
     if (String((ev as any).creatorClerkId) !== creatorClerkId)
       return NextResponse.json({ error: "Only creator can admit/reject" }, { status: 403 });
 

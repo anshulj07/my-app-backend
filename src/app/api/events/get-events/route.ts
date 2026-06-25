@@ -182,19 +182,12 @@ export async function GET(req: Request) {
     const visibility = (searchParams.get("visibility") || "public").trim();
     const upcomingOnly = (searchParams.get("upcomingOnly") || "").trim() === "1";
 
-    // ✅ kind filter support: "free" | "paid" | "service"
+    // ✅ Decide which collections to query
     const kind = (searchParams.get("kind") || "").trim();
 
     const client = await clientPromise;
     const db = client.db("assis_auth");
-    
-    // ✅ Decide which collections to query based on 'kind'
-    // If kind is 'service', we only look in services.
-    // If kind is 'free'|'paid', we only look in events.
-    // If kind is missing/empty, we look in both for the map.
-    const collectionsToQuery = [];
-    if (!kind || kind === "service") collectionsToQuery.push(db.collection("services"));
-    if (!kind || kind === "free" || kind === "paid") collectionsToQuery.push(db.collection("events"));
+    const collectionsToQuery = [db.collection("events")];
 
     const query: any = {};
 
@@ -205,7 +198,7 @@ export async function GET(req: Request) {
     if (cityKey) query["location.cityKey"] = cityKey;
 
     // ✅ kind filter
-    if (kind === "free" || kind === "paid" || kind === "service") query.kind = kind;
+    if (kind === "free" || kind === "paid") query.kind = kind;
 
     // ✅ Always exclude ended/deleted events
     // ✅ Smart expiry: hide events that have passed (combined with $and to avoid conflict)

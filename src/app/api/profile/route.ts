@@ -92,8 +92,7 @@ export async function GET(req: Request) {
         // ✅ Earnings (in paise, frontend converts to ₹)
         thisMonthEarning: stats?.thisMonthEarning ?? 0,
         overallEarning: stats?.overallEarning ?? 0,
-        // ✅ Services (titles of service-kind events)
-        services: Array.isArray(stats?.services) ? stats.services : [],
+        // ✅ Services removed
         isVerified: !!safeDoc.verification?.idVerified,
         verificationStatus: p.verificationStatus || "unverified",
         onboarding: safeDoc.onboarding ?? null,

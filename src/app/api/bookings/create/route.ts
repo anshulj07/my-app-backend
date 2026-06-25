@@ -89,11 +89,8 @@ export async function POST(req: Request) {
       }
       const _id = new ObjectId(eventId);
       
-      // ✅ Try 'events' collection first, then 'services'
+      // ✅ Try 'events' collection
       eventDoc = await db.collection("events").findOne({ _id });
-      if (!eventDoc) {
-        eventDoc = await db.collection("services").findOne({ _id });
-      }
 
       if (!eventDoc) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
@@ -126,12 +123,11 @@ export async function POST(req: Request) {
         );
       }
 
-      // 2. Check both collections for attendees list (safety check)
+      // 2. Check events collection for attendees list (safety check)
       const attendeeQuery = { _id: new ObjectId(eventId), "attendees.clerkId": bookerId };
       const inEvents = await db.collection("events").findOne(attendeeQuery);
-      const inServices = await db.collection("services").findOne(attendeeQuery);
 
-      if (inEvents || inServices) {
+      if (inEvents) {
         return NextResponse.json(
           { error: "You are already an attendee of this event" },
           { status: 409 }
@@ -265,8 +261,8 @@ export async function POST(req: Request) {
     const bookingId = result.insertedId.toString();
 
     // ── Sync with correct collection (so it shows in 'Going' tab as pending) ──
-    if ((type === "event" || type === "service") && eventId) {
-      const parentCol = eventDoc.kind === "service" ? "services" : "events";
+    if (type === "event" && eventId) {
+      const parentCol = "events";
       
       // ✅ Prevent duplicate entries for the same user in pendingRequests
       await db.collection(parentCol).updateOne(

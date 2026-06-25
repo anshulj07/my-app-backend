@@ -24,18 +24,11 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Fetch from both 'events' and 'services'
-    const [evDocs, svDocs] = await Promise.all([
-      db.collection("events").find(
-        { creatorClerkId: clerkUserId, status: { $nin: ["deleted"] } },
-        { projection: { title: 1, emoji: 1, attendees: 1, pendingRequests: 1, joinPolicy: 1 } }
-      ).toArray(),
-      db.collection("services").find(
-        { creatorClerkId: clerkUserId, status: { $nin: ["deleted"] } },
-        { projection: { title: 1, emoji: 1, attendees: 1, pendingRequests: 1, joinPolicy: 1 } }
-      ).toArray()
-    ]);
-    const events = [...evDocs, ...svDocs];
+    // ✅ Fetch from 'events'
+    const events = await db.collection("events").find(
+      { creatorClerkId: clerkUserId, status: { $nin: ["deleted"] } },
+      { projection: { title: 1, emoji: 1, attendees: 1, pendingRequests: 1, joinPolicy: 1 } }
+    ).toArray();
 
     type NotifItem = {
       id: string;

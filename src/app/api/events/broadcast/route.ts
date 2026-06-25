@@ -41,14 +41,10 @@ export async function POST(req: NextRequest) {
     const db     = client.db(DB);
 
     // 1. Fetch the event and verify the host
-    let event = await db.collection(EVENTS_COLL).findOne({ _id: new ObjectId(eventId) });
+    const event = await db.collection(EVENTS_COLL).findOne({ _id: new ObjectId(eventId) });
 
     if (!event) {
-      event = await db.collection("services").findOne({ _id: new ObjectId(eventId) });
-    }
-
-    if (!event) {
-      return NextResponse.json({ error: "Event or Service not found in database" }, { status: 404 });
+      return NextResponse.json({ error: "Event not found in database" }, { status: 404 });
     }
 
     const hostId = String(event.creatorClerkId || event.clerkUserId || "").trim();

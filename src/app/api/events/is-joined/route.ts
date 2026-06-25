@@ -92,12 +92,7 @@ export async function GET(req: Request) {
       { projection: { "attendees": 1, "pendingRequests": 1 } }
     );
 
-    if (!ev) {
-      ev = await db.collection("services").findOne(
-        { _id: new ObjectId(eventId) },
-        { projection: { "attendees": 1, "pendingRequests": 1 } }
-      );
-    }
+
 
     if (!ev) return NextResponse.json({ ok: true, joined: false, pending: false }, { status: 200 });
 
