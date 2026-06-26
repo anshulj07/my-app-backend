@@ -152,6 +152,7 @@ export async function PATCH(req: Request) {
     if ("city" in body)      patch["profile.city"]      = String(body.city      ?? "").trim();
     if ("country" in body)   patch["profile.country"]   = String(body.country   ?? "").trim();
     if ("isPrivate" in body) patch["profile.isPrivate"] = !!body.isPrivate;
+    if ("expoPushToken" in body) patch["profile.expoPushToken"] = String(body.expoPushToken ?? "").trim();
 
     if ("about" in body) {
       const about = String(body.about ?? "").trim();

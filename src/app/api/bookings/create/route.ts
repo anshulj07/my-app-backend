@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import Razorpay from "razorpay";
+import { sendPushNotification } from "../../../../../lib/push";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
@@ -295,8 +296,26 @@ export async function POST(req: Request) {
       const otp = String(Math.floor(100000 + Math.random() * 900000));
       await db.collection("bookings").updateOne(
         { _id: result.insertedId },
-        { $set: { checkInOtp: otp, status: "confirmed" } }
+        { $set: { checkInOtp: otp, status: initialStatus } }
       );
+
+      if (type === "event" && hostId && hostId !== bookerId) {
+        if (joinPolicy === "approval") {
+          await sendPushNotification(
+             hostId,
+             "New Request to Join ✋",
+             `${realBookerName} has requested to join your event '${eventDoc?.title || "Event"}'. Open the app to review.`,
+             { eventId, type: "pending" }
+          );
+        } else {
+          await sendPushNotification(
+             hostId,
+             "New Attendee! 🎉",
+             `${realBookerName} just joined your event '${eventDoc?.title || "Event"}'.`,
+             { eventId, type: "joined" }
+          );
+        }
+      }
 
       return NextResponse.json({
         ok: true,

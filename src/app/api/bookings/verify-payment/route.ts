@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import crypto from "crypto";
+import { sendPushNotification } from "../../../../../lib/push";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
@@ -128,6 +129,20 @@ export async function POST(req: Request) {
           } as any
         );
         console.log(`[VerifyPayment] Booking ${bookingId} is now PAID but PENDING host approval.`);
+        
+        if (booking.hostId && booking.hostId !== booking.bookerId) {
+           const userDoc = await db.collection("users").findOne({ clerkUserId: booking.bookerId });
+           const realName = userDoc?.profile?.firstName 
+             ? `${userDoc.profile.firstName} ${userDoc.profile.lastName || ""}`.trim() 
+             : (booking.booker?.name || "Guest").trim();
+
+           await sendPushNotification(
+             booking.hostId,
+             "Paid Request to Join 💰✋",
+             `${realName} has paid and requested to join your event '${ev?.title || "Event"}'. Open the app to review.`,
+             { eventId, type: "pending", paid: true }
+           );
+        }
       } else {
         /**
          * ── CASE B: OPEN JOIN ──
@@ -166,6 +181,15 @@ export async function POST(req: Request) {
             $set: { updatedAt: new Date() },
           }
         );
+
+        if (booking.hostId && booking.hostId !== booking.bookerId) {
+           await sendPushNotification(
+             booking.hostId,
+             "New Paid Attendee! 💰🎉",
+             `${realName} just paid and joined your event '${ev?.title || "Event"}'.`,
+             { eventId, type: "joined", paid: true }
+           );
+        }
       }
 
       // Track statistics for host (Earning should be counted even if pending approval?)
