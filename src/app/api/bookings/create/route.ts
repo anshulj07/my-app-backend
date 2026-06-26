@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import Razorpay from "razorpay";
-import { sendPushNotification } from "../../../../../lib/push";
+import { sendPushNotification } from "../../../../lib/push";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;

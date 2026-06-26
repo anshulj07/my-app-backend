@@ -1,5 +1,5 @@
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
-import clientPromise from './mongodb';
+import clientPromise from '../../lib/mongodb';
 
 const expo = new Expo();
 
