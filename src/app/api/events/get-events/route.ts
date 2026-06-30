@@ -94,7 +94,7 @@ export async function GET(req: Request) {
     query.$and = [
       {
         $or: [
-          { status: { $nin: ["ended", "completed", "deleted", "paused"] } },
+          { status: { $nin: ["waiting", "pending", "rejected", "ended", "completed", "deleted", "paused"] } },
           ...(includePausedFor ? [{ status: "paused", creatorClerkId: includePausedFor }] : [])
         ]
       },

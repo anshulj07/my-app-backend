@@ -305,7 +305,7 @@ export async function POST(req: Request) {
       timezone:       data.timezone ?? "",
       tags:           data.tags ?? [],
       visibility:     data.visibility ?? "public",
-      status:         "active",
+      status:         "waiting",
       location: {
         ...data.location,
         // GeoJSON for $near queries — requires 2dsphere index
