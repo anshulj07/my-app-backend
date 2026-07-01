@@ -347,8 +347,8 @@ const PatchFieldsSchema = z
 
     // ✅ accept both old + new kinds for backward compatibility
     // - old: "free" | "service"
-    // - new: "event_free" | "event_paid" | "service"
-    kind: z.enum(["free", "service", "event_free", "event_paid"]).optional(),
+    // - new: "event_free" | "event_paid" | "recurring"
+    kind: z.enum(["free", "event_free", "event_paid", "recurring"]).optional(),
 
     priceCents: z.number().int().nullable().optional(),
 
@@ -380,7 +380,13 @@ const PatchFieldsSchema = z
     bannerUri: z.union([z.string().url(), z.literal("")]).optional(),
     capacity: z.number().int().min(0).nullable().optional(),
     attendance: z.number().int().min(0).nullable().optional(),
+    recurringSchedule: z.array(z.object({
+      day: z.number().int().min(0).max(6),
+      startTime: z.string().regex(/^\d{2}:\d{2}$/),
+      endTime: z.string().regex(/^\d{2}:\d{2}$/),
+    })).optional(),
   })
+
   .partial();
 
 const UpdateEventSchema = z
@@ -407,14 +413,13 @@ function buildStartsAtFromDateTime(date?: string, time?: string) {
  * - "event_free" -> "free"
  * - "event_paid" -> "event_paid" (kept distinct; treat as paid requiring price)
  * - "free" -> "free"
- * - "service" -> "service"
  */
 function normalizeKind(kind?: string) {
   if (!kind) return undefined;
   if (kind === "event_free") return "free";
   if (kind === "event_paid") return "event_paid";
   if (kind === "free") return "free";
-  if (kind === "service") return "service";
+  if (kind === "recurring") return "recurring";
   return undefined;
 }
 
@@ -458,6 +463,7 @@ export async function PATCH(req: Request) {
     const rateType = u.rateType ?? payload.rateType;
     const serviceMetadata = u.serviceMetadata ?? payload.serviceMetadata;
     const bannerUri = u.bannerUri ?? (payload as any).bannerUri;
+    const recurringSchedule = u.recurringSchedule ?? (payload as any).recurringSchedule;
 
     const creator = (payload.creatorClerkId || payload.clerkUserId || "").trim();
     if (!creator) {
@@ -472,9 +478,9 @@ export async function PATCH(req: Request) {
 
     // ✅ kind/price rules
     // Paid kinds require valid price
-    if (kind === "service" || kind === "event_paid") {
+    if (kind === "event_paid") {
       if (priceCents == null || typeof priceCents !== "number" || priceCents <= 0) {
-        return NextResponse.json({ error: "priceCents must be > 0 when kind=service/event_paid" }, { status: 400 });
+        return NextResponse.json({ error: "priceCents must be > 0 when kind=event_paid" }, { status: 400 });
       }
     }
 
@@ -579,6 +585,7 @@ export async function PATCH(req: Request) {
     const attendance = u.attendance ?? payload.attendance;
     if (typeof capacity !== "undefined") $set.capacity = capacity;
     if (typeof attendance !== "undefined") $set.attendance = attendance;
+    if (typeof recurringSchedule !== "undefined") $set.recurringSchedule = recurringSchedule;
 
     if (typeof location !== "undefined") {
       if (!location) {
@@ -609,13 +616,8 @@ export async function PATCH(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Identify the correct collection: search both 'events' and 'services'
-    let col = db.collection("events");
+    const col = db.collection("events");
     let target = await col.findOne(findQuery);
-    if (!target) {
-      col = db.collection("services");
-      target = await col.findOne(findQuery);
-    }
 
     if (!target) {
       return NextResponse.json({ error: "Event not found or you are not the creator" }, { status: 404 });

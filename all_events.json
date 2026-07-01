@@ -1,0 +1,1343 @@
+[
+  {
+    "_id": "6a3437be94438b1023374783",
+    "title": "Coffee",
+    "description": "Meet",
+    "emoji": "☕️",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-06-24",
+    "time": "17:53",
+    "endDate": "2026-06-24",
+    "endTime": "23:53",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 22.7195687,
+      "lng": 75.8577258,
+      "formattedAddress": "Indore, Madhya Pradesh, India",
+      "placeId": "ChIJ2w1BG638YjkR9EBiNdrEbgk",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "",
+      "neighborhood": "",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.8577258,
+          22.7195687
+        ]
+      }
+    },
+    "createdAt": "2026-06-18T18:23:58.963Z",
+    "updatedAt": "2026-06-19T15:19:45.746Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRmFFArXHS29IJFMntAqWp7NUZrvbDCV8oshLe",
+    "startsAt": "2026-06-24T12:23:00.000Z",
+    "endsAt": "2026-06-24T18:23:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 74,
+      "riskLevel": "high",
+      "semanticIntegrity": 20,
+      "hostLegitimacy": 50,
+      "engagementPattern": 30,
+      "flags": [
+        {
+          "type": "Vague Details",
+          "description": "The event description is too vague, providing just 'Meet' without any context.",
+          "severity": "high"
+        },
+        {
+          "type": "Suspicious Title",
+          "description": "The title 'Coffee' does not provide enough information about the event format or activities.",
+          "severity": "high"
+        },
+        {
+          "type": "[Image] irrelevant-image",
+          "description": "Unrelated to coffee or meeting theme",
+          "severity": "medium",
+          "source": "image"
+        }
+      ],
+      "summary": "The event titled 'Coffee' lacks sufficient details and context, raising concerns about its legitimacy. While the price is free, the vague description and lack of clarity about the event's purpose could lead to potential risks. The uploaded image does not match the event — The image of a world map with an icon is unrelated to coffee or a meeting event.",
+      "recommendation": "Request more detailed information from the host to ensure legitimacy before proceeding.",
+      "scannedAt": "2026-06-19T15:19:44.662Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRmFFArXHS29IJFMntAqWp7NUZrvbDCV8oshLe",
+        "checked": true,
+        "imageRiskScore": 45,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "The image of a world map with an icon is unrelated to coffee or a meeting event.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "The map and icon look generic and unrelated to the event.",
+        "suspiciousText": "none",
+        "dominantContent": "World map with an icon overlay",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 70,
+        "imageRiskScore": 45,
+        "combinedNote": "Text: 70 × 75% + Image: 45 × 25% = 74"
+      }
+    },
+    "admin_status": "rejected",
+    "botDecision": {
+      "action": "rejected",
+      "score": 74,
+      "at": "2026-06-19T15:19:45.747Z"
+    },
+    "isActive": false,
+    "isApproved": false,
+    "isListed": false,
+    "moderationStatus": "rejected",
+    "moderatorNote": "AI Risk Score: 74/100 — The event titled 'Coffee' lacks sufficient details and context, raising concerns about its legitimacy. While the price is free, the vague description and lack of clarity about the event's purpose could lead to potential risks. The uploaded image does not match the event — The image of a world map with an icon is unrelated to coffee or a meeting event. Request more detailed information from the host to ensure legitimacy before proceeding."
+  },
+  {
+    "_id": "6a203ada154f8fd25e412b11",
+    "title": "Cooking show",
+    "description": "",
+    "emoji": "🎸",
+    "creatorClerkId": "user_3DX87pfjfix8QiflaY8xpecEBz8",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-06-09",
+    "time": "17:01",
+    "endDate": "2026-06-09",
+    "endTime": "20:01",
+    "timezone": "Asia/Calcutta",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "admin_status": "approved",
+    "moderationStatus": "approved",
+    "isListed": true,
+    "isApproved": true,
+    "location": {
+      "lat": 28.7040592,
+      "lng": 77.10249019999999,
+      "formattedAddress": "Delhi, India",
+      "placeId": "ChIJLbZ-NFv9DDkRQJY4FbcFcgM",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Delhi",
+      "admin1Code": "DL",
+      "city": "Delhi Division",
+      "cityKey": "delhi-division",
+      "postalCode": "",
+      "neighborhood": "",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          77.10249019999999,
+          28.7040592
+        ]
+      }
+    },
+    "createdAt": "2026-06-03T14:31:54.128Z",
+    "updatedAt": "2026-06-03T14:32:28.764Z",
+    "bannerUri": "https://utfs.io/f/3hB7WvsizuxRZoTXH5GBnsf6dmI83rVAu5JXaUFSl0DObxj9",
+    "startsAt": "2026-06-09T11:31:00.000Z",
+    "endsAt": "2026-06-09T14:31:00.000Z",
+    "isActive": true
+  },
+  {
+    "_id": "6a17de77d918c70eb62009f1",
+    "title": "Business meeting",
+    "description": "Business meeting with big investors they can invest in your business and make a strong and powerful your business so come and share your business Ideas",
+    "emoji": "📍",
+    "creatorClerkId": "user_3DX87pfjfix8QiflaY8xpecEBz8",
+    "creatorName": "Local Host",
+    "kind": "paid",
+    "priceCents": 149900,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-29",
+    "time": "18:47",
+    "endDate": "2026-05-29",
+    "endTime": "21:47",
+    "timezone": "Asia/Calcutta",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "admin_status": "rejected",
+    "moderationStatus": "rejected",
+    "isListed": false,
+    "isApproved": false,
+    "location": {
+      "lat": 22.7516799,
+      "lng": 75.89690879999999,
+      "formattedAddress": "Plot No. B1, PU 4, Scheme No. 54, Vijay Nagar Square, AB Rd, Vijay Nagar, Scheme No 54, Indore, Madhya Pradesh 452010, India",
+      "placeId": "ChIJKSQ4XqoCYzkRWWkI37ybdcw",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "452010",
+      "neighborhood": "Vijay Nagar",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.89690879999999,
+          22.7516799
+        ]
+      }
+    },
+    "createdAt": "2026-05-28T06:19:35.287Z",
+    "updatedAt": "2026-05-28T06:23:10.310Z",
+    "bannerUri": "https://utfs.io/f/3hB7WvsizuxR90g7hKEilaW7CgchmRT0tuH1BsUyob5F3MK9",
+    "startsAt": "2026-05-29T13:17:00.000Z",
+    "endsAt": "2026-05-29T16:17:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 94,
+      "riskLevel": "critical",
+      "semanticIntegrity": 75,
+      "hostLegitimacy": 60,
+      "engagementPattern": 70,
+      "flags": [
+        {
+          "type": "Vague Details",
+          "description": "The description lacks specific information about the investors and the nature of the investment.",
+          "severity": "medium"
+        },
+        {
+          "type": "High Price",
+          "description": "The entry price of ₹1499 is relatively high without detailed value provided.",
+          "severity": "medium"
+        },
+        {
+          "type": "[Image] Irrelevant Content",
+          "description": "Contains a phone call screen, not related to business meeting.",
+          "severity": "high",
+          "source": "image"
+        },
+        {
+          "type": "[Image] Sensitive Information",
+          "description": "Displays phone number prominently.",
+          "severity": "high",
+          "source": "image"
+        }
+      ],
+      "summary": "This event is a business meeting aimed at connecting attendees with potential investors. However, the description is vague and lacks specific details about the investors or the investment process. Suspicious text detected in image: \"Phone +91 62657 72747\".",
+      "recommendation": "Consider providing more detailed information about the investors and the meeting agenda to enhance credibility.",
+      "scannedAt": "2026-05-28T06:23:09.949Z",
+      "imageAnalysis": {
+        "imageUrl": "https://utfs.io/f/3hB7WvsizuxR90g7hKEilaW7CgchmRT0tuH1BsUyob5F3MK9",
+        "checked": true,
+        "imageRiskScore": 80,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "Image is a phone call screen, unrelated to a business meeting.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "Generic phone call interface screenshot.",
+        "suspiciousText": "Phone +91 62657 72747",
+        "dominantContent": "Phone call interface with contact details",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 65,
+        "imageRiskScore": 80,
+        "combinedNote": "Text: 65 × 75% + Image: 80 × 25% = 94"
+      }
+    },
+    "botDecision": {
+      "action": "rejected",
+      "score": 94,
+      "at": "2026-05-28T06:23:10.311Z"
+    },
+    "isActive": false,
+    "moderatorNote": "AI Risk Score: 94/100 — This event is a business meeting aimed at connecting attendees with potential investors. However, the description is vague and lacks specific details about the investors or the investment process. Suspicious text detected in image: \"Phone +91 62657 72747\". Consider providing more detailed information about the investors and the meeting agenda to enhance credibility."
+  },
+  {
+    "_id": "6a17dcc9d918c70eb62009f0",
+    "title": "Garba outfit",
+    "description": "Garba outfit make u look pretty 🤩",
+    "emoji": "📍",
+    "creatorClerkId": "user_3DX87pfjfix8QiflaY8xpecEBz8",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "open",
+    "attendance": 300,
+    "capacity": 300,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-30",
+    "time": "10:41",
+    "endDate": "2026-05-30",
+    "endTime": "22:41",
+    "timezone": "Asia/Calcutta",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "admin_status": "approved",
+    "moderationStatus": "approved",
+    "isListed": true,
+    "isApproved": true,
+    "location": {
+      "lat": 22.2532435,
+      "lng": 76.0407918,
+      "formattedAddress": "Barwaha, Madhya Pradesh 451115, India",
+      "placeId": "ChIJy4dJNP-WYjkRLPx198Hcw-g",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Barwaha",
+      "cityKey": "barwaha",
+      "postalCode": "451115",
+      "neighborhood": "",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          76.0407918,
+          22.2532435
+        ]
+      }
+    },
+    "createdAt": "2026-05-28T06:12:25.855Z",
+    "updatedAt": "2026-05-28T06:14:31.187Z",
+    "bannerUri": "https://utfs.io/f/3hB7WvsizuxR0h6NX1KQv0b5jLkcrAytBHMhVfmUK9EdsSG6",
+    "startsAt": "2026-05-30T05:11:00.000Z",
+    "endsAt": "2026-05-30T17:11:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 38,
+      "riskLevel": "medium",
+      "semanticIntegrity": 70,
+      "hostLegitimacy": 80,
+      "engagementPattern": 50,
+      "flags": [],
+      "summary": "The event titled 'Garba outfit' is hosted locally and offers a free entry, which lowers the risk of financial fraud. The description is brief but does not raise any significant red flags, and the location is provided clearly. Suspicious text detected in image: \"Savaria, Singer - Neeti Mohan, Composer - Vikram Montrose, Lyricist - Shekhar Astitwa\".",
+      "recommendation": "Consider adding more details about the event to enhance credibility.",
+      "scannedAt": "2026-05-28T06:14:30.939Z",
+      "imageAnalysis": {
+        "imageUrl": "https://utfs.io/f/3hB7WvsizuxR0h6NX1KQv0b5jLkcrAytBHMhVfmUK9EdsSG6",
+        "checked": true,
+        "imageRiskScore": 0,
+        "isRelevant": true,
+        "isAppropriate": true,
+        "isPlaceholder": false,
+        "relevanceNote": "The image shows people wearing Garba outfits.",
+        "appropriatenessNote": "clean",
+        "placeholderNote": "The image appears specific to the event.",
+        "suspiciousText": "Savaria, Singer - Neeti Mohan, Composer - Vikram Montrose, Lyricist - Shekhar Astitwa",
+        "dominantContent": "Three people in traditional Indian attire",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 30,
+        "imageRiskScore": 0,
+        "combinedNote": "Text: 30 × 75% + Image: 0 × 25% = 38"
+      }
+    },
+    "botDecision": {
+      "action": "approved_with_warnings",
+      "score": 38,
+      "at": "2026-05-28T06:14:31.187Z"
+    },
+    "internalFlag": "needs_improvement",
+    "isActive": true
+  },
+  {
+    "_id": "6a170b27885bbacfdd846cb4",
+    "title": "Test",
+    "description": "Test",
+    "emoji": "📍",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-30",
+    "time": "20:44",
+    "endDate": "2026-05-30",
+    "endTime": "21:19",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 40.75368539999999,
+      "lng": -73.9991637,
+      "formattedAddress": "New York, NY 10001, USA",
+      "placeId": "ChIJnQClza9ZwokRQ37NEa49KoQ",
+      "countryCode": "US",
+      "countryName": "United States",
+      "admin1": "New York",
+      "admin1Code": "NY",
+      "city": "New York",
+      "cityKey": "new-york",
+      "postalCode": "10001",
+      "neighborhood": "Manhattan",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          -73.9991637,
+          40.75368539999999
+        ]
+      }
+    },
+    "createdAt": "2026-05-27T15:17:59.704Z",
+    "updatedAt": "2026-05-27T15:22:30.276Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRlSzdvf9sVHqMCrToRiQWXZ6vbUGt2NcFLJm3",
+    "startsAt": "2026-05-30T15:14:00.000Z",
+    "endsAt": "2026-05-30T15:49:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 84,
+      "riskLevel": "critical",
+      "semanticIntegrity": 20,
+      "hostLegitimacy": 30,
+      "engagementPattern": 15,
+      "flags": [
+        {
+          "type": "Vague Description",
+          "description": "The event description is overly simplistic and lacks detail.",
+          "severity": "high"
+        },
+        {
+          "type": "Suspicious Title",
+          "description": "The title 'Test' does not convey any meaningful information about the event.",
+          "severity": "high"
+        },
+        {
+          "type": "[Image] irrelevant_content",
+          "description": "Image content does not match event context.",
+          "severity": "medium",
+          "source": "image"
+        }
+      ],
+      "summary": "The event titled 'Test' lacks essential details, with a vague description and an ambiguous title. Despite being listed as free, the absence of information raises concerns about its legitimacy. The uploaded image does not match the event — Image shows a software interface unrelated to the event.",
+      "recommendation": "Request more detailed information from the host before proceeding with any engagement.",
+      "scannedAt": "2026-05-27T15:22:30.158Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRlSzdvf9sVHqMCrToRiQWXZ6vbUGt2NcFLJm3",
+        "checked": true,
+        "imageRiskScore": 41,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "Image shows a software interface unrelated to the event.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "Looks like a generic screenshot of a form.",
+        "suspiciousText": "none",
+        "dominantContent": "Computer screen with software form",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 85,
+        "imageRiskScore": 41,
+        "combinedNote": "Text: 85 × 75% + Image: 41 × 25% = 84"
+      }
+    },
+    "admin_status": "rejected",
+    "botDecision": {
+      "action": "rejected",
+      "score": 84,
+      "at": "2026-05-27T15:22:30.276Z"
+    },
+    "isActive": false,
+    "isApproved": false,
+    "isListed": false,
+    "moderationStatus": "rejected",
+    "moderatorNote": "AI Risk Score: 84/100 — The event titled 'Test' lacks essential details, with a vague description and an ambiguous title. Despite being listed as free, the absence of information raises concerns about its legitimacy. The uploaded image does not match the event — Image shows a software interface unrelated to the event. Request more detailed information from the host before proceeding with any engagement."
+  },
+  {
+    "_id": "6a0f0b33ae8e4f2e6f1cb8f9",
+    "title": "Games",
+    "description": "Hehjs",
+    "emoji": "🎲",
+    "creatorClerkId": "user_3C720QcslCGzJe2yx59XgiX52Tt",
+    "creatorName": "Local Host",
+    "kind": "paid",
+    "priceCents": 29900,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-21",
+    "time": "19:30",
+    "endDate": "2026-05-21",
+    "endTime": "20:10",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 22.7280036,
+      "lng": 75.804099,
+      "formattedAddress": "Indore, Madhya Pradesh 452005, India",
+      "placeId": "ChIJh6bRRS3_YjkRLRx0itemDz0",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "452005",
+      "neighborhood": "",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.804099,
+          22.7280036
+        ]
+      }
+    },
+    "createdAt": "2026-05-21T13:40:03.463Z",
+    "updatedAt": "2026-05-23T08:15:49.087Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRJx2bkhUDTBxGSs3fuNHj4Zk2ynO5Ibavgp7d",
+    "startsAt": "2026-05-21T14:00:00.000Z",
+    "endsAt": "2026-05-21T14:40:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 84,
+      "riskLevel": "critical",
+      "semanticIntegrity": 10,
+      "hostLegitimacy": 20,
+      "engagementPattern": 15,
+      "flags": [
+        {
+          "type": "vague details",
+          "description": "The event description is nonsensical and lacks meaningful information.",
+          "severity": "high"
+        },
+        {
+          "type": "unknown host",
+          "description": "The host 'Local Host' does not provide a recognizable identity or credentials.",
+          "severity": "high"
+        },
+        {
+          "type": "unrealistic claims",
+          "description": "The title 'Games' is overly generic and does not specify the nature of the event.",
+          "severity": "high"
+        },
+        {
+          "type": "[Image] irrelevant content",
+          "description": "Map does not relate to games",
+          "severity": "medium",
+          "source": "image"
+        }
+      ],
+      "summary": "The event titled 'Games' raises significant concerns due to its vague description and unverified host. With a lack of meaningful details and a generic title, it appears to be highly suspicious. The uploaded image does not match the event — The image shows a map with numbers, unrelated to games.",
+      "recommendation": "Do not proceed with this event; further investigation is necessary.",
+      "scannedAt": "2026-05-23T08:15:48.960Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRJx2bkhUDTBxGSs3fuNHj4Zk2ynO5Ibavgp7d",
+        "checked": true,
+        "imageRiskScore": 41,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "The image shows a map with numbers, unrelated to games.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "Map with generic data overlay, not specific to games.",
+        "suspiciousText": "None",
+        "dominantContent": "Map of the United States with numbers",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 85,
+        "imageRiskScore": 41,
+        "combinedNote": "Text: 85 × 75% + Image: 41 × 25% = 84"
+      }
+    },
+    "admin_status": "rejected",
+    "botDecision": {
+      "action": "rejected",
+      "score": 84,
+      "at": "2026-05-23T08:15:49.088Z"
+    },
+    "isActive": false,
+    "isApproved": false,
+    "isListed": false,
+    "moderationStatus": "rejected",
+    "moderatorNote": "AI Risk Score: 84/100 — The event titled 'Games' raises significant concerns due to its vague description and unverified host. With a lack of meaningful details and a generic title, it appears to be highly suspicious. The uploaded image does not match the event — The image shows a map with numbers, unrelated to games. Do not proceed with this event; further investigation is necessary."
+  },
+  {
+    "_id": "6a0f0a53ae8e4f2e6f1cb8f7",
+    "title": "Coffee",
+    "description": "Jsisk",
+    "emoji": "☕️",
+    "creatorClerkId": "user_3C720QcslCGzJe2yx59XgiX52Tt",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [
+      {
+        "clerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+        "name": "Heje",
+        "email": "soumyamahale125@gmail.com",
+        "phone": "",
+        "message": "",
+        "imageUrl": "https://img.clerk.com/eyJ0eXBlIjoiZGVmYXVsdCIsImlpZCI6Imluc18zQUhpWEl0R0h2ODV0MzkxM3FqaFJVa1d5eTIiLCJyaWQiOiJ1c2VyXzNDNnpnOXFMVFBOT2VreGxxV1JuZ1hKU3ZKNiJ9",
+        "joinedAt": "2026-05-21T13:41:28.516Z",
+        "checkInOtp": "963099",
+        "checkedIn": true,
+        "checkedInAt": "2026-05-21T13:42:16.267Z"
+      }
+    ],
+    "pendingRequests": [],
+    "date": "2026-05-21",
+    "time": "19:15",
+    "endDate": "2026-05-21",
+    "endTime": "20:06",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 22.7195687,
+      "lng": 75.8577258,
+      "formattedAddress": "Indore, Madhya Pradesh, India",
+      "placeId": "ChIJ2w1BG638YjkR9EBiNdrEbgk",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "",
+      "neighborhood": "",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.8577258,
+          22.7195687
+        ]
+      }
+    },
+    "createdAt": "2026-05-21T13:36:19.076Z",
+    "updatedAt": "2026-05-23T08:15:37.445Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxR0izdNlKQv0b5jLkcrAytBHMhVfmUK9EdsSG6",
+    "startsAt": "2026-05-21T13:45:00.000Z",
+    "endsAt": "2026-05-21T14:36:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 100,
+      "riskLevel": "critical",
+      "semanticIntegrity": 20,
+      "hostLegitimacy": 30,
+      "engagementPattern": 10,
+      "flags": [
+        {
+          "type": "vague description",
+          "description": "The event description is unclear and lacks meaningful content.",
+          "severity": "high"
+        },
+        {
+          "type": "unknown host",
+          "description": "The host 'Local Host' provides no verifiable identity or background.",
+          "severity": "high"
+        },
+        {
+          "type": "[Image] Irrelevance",
+          "description": "Image does not relate to coffee event.",
+          "severity": "medium",
+          "source": "image"
+        }
+      ],
+      "summary": "The event titled 'Coffee' is poorly described with only a single word and lacks important details about the host and agenda. The vague information raises concerns about its legitimacy and purpose. Suspicious text detected in image: \"Sign reads 'Nine Months Complete'.\".",
+      "recommendation": "Consider providing a more detailed description and verifying the host's identity before proceeding.",
+      "scannedAt": "2026-05-23T08:15:37.198Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxR0izdNlKQv0b5jLkcrAytBHMhVfmUK9EdsSG6",
+        "checked": true,
+        "imageRiskScore": 45,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "The image features a baby in a jungle-themed setup, not related to coffee.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "Looks like a generic stock photo with a baby and stuffed animals.",
+        "suspiciousText": "Sign reads 'Nine Months Complete'.",
+        "dominantContent": "Baby in a lion costume with toys.",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 85,
+        "imageRiskScore": 45,
+        "combinedNote": "Text: 85 × 75% + Image: 45 × 25% = 100"
+      }
+    },
+    "admin_status": "rejected",
+    "botDecision": {
+      "action": "rejected",
+      "score": 100,
+      "at": "2026-05-23T08:15:37.445Z"
+    },
+    "isActive": false,
+    "isApproved": false,
+    "isListed": false,
+    "moderationStatus": "rejected",
+    "moderatorNote": "AI Risk Score: 100/100 — The event titled 'Coffee' is poorly described with only a single word and lacks important details about the host and agenda. The vague information raises concerns about its legitimacy and purpose. Suspicious text detected in image: \"Sign reads 'Nine Months Complete'.\". Consider providing a more detailed description and verifying the host's identity before proceeding."
+  },
+  {
+    "_id": "6a0e7bb03d075bac5ad249c0",
+    "title": "Movie",
+    "description": "Movie",
+    "emoji": "🎬",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "paid",
+    "priceCents": 29900,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-21",
+    "time": "09:15",
+    "endDate": "2026-05-21",
+    "endTime": "10:15",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 22.6917042,
+      "lng": 75.83139299999999,
+      "formattedAddress": "Sudama Nagar, Indore, Madhya Pradesh 452009, India",
+      "placeId": "ChIJNZeNqEv8YjkR06G4pROutyA",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "452009",
+      "neighborhood": "Sudama Nagar",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.83139299999999,
+          22.6917042
+        ]
+      }
+    },
+    "createdAt": "2026-05-21T03:27:44.476Z",
+    "updatedAt": "2026-05-23T08:15:19.840Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRiiWlLNRWuLReKjamtXd743lEYVwPqcnvOCBG",
+    "startsAt": "2026-05-21T03:45:00.000Z",
+    "endsAt": "2026-05-21T04:45:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 92,
+      "riskLevel": "critical",
+      "semanticIntegrity": 25,
+      "hostLegitimacy": 40,
+      "engagementPattern": 30,
+      "flags": [
+        {
+          "type": "Vague Details",
+          "description": "The event title and description are too vague, providing no specific information about the movie.",
+          "severity": "high"
+        },
+        {
+          "type": "Suspicious Payment",
+          "description": "The price of ₹299 for a movie is relatively low, which may raise concerns about the quality or legitimacy of the event.",
+          "severity": "medium"
+        },
+        {
+          "type": "Unknown Host",
+          "description": "The host is listed as 'Local Host' with no identifiable information or reputation.",
+          "severity": "high"
+        },
+        {
+          "type": "[Image] irrelevant content",
+          "description": "Image does not relate to any movie theme.",
+          "severity": "medium",
+          "source": "image"
+        }
+      ],
+      "summary": "This event titled 'Movie' lacks a clear description and specific details about the film being shown. It is hosted by an unidentified entity, raising concerns about its legitimacy. Suspicious text detected in image: \"Nine months complete\".",
+      "recommendation": "Consider gathering more detailed information about the event and the host before proceeding with registration.",
+      "scannedAt": "2026-05-23T08:15:17.865Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRiiWlLNRWuLReKjamtXd743lEYVwPqcnvOCBG",
+        "checked": true,
+        "imageRiskScore": 41,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "The image features a baby in costume, unrelated to a movie.",
+        "appropriatenessNote": "clean",
+        "placeholderNote": "The image looks like a generic stock photo.",
+        "suspiciousText": "Nine months complete",
+        "dominantContent": "Baby in lion costume with stuffed animals",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 75,
+        "imageRiskScore": 41,
+        "combinedNote": "Text: 75 × 75% + Image: 41 × 25% = 92"
+      }
+    },
+    "admin_status": "rejected",
+    "botDecision": {
+      "action": "rejected",
+      "score": 92,
+      "at": "2026-05-23T08:15:19.840Z"
+    },
+    "isActive": false,
+    "isApproved": false,
+    "isListed": false,
+    "moderationStatus": "rejected",
+    "moderatorNote": "AI Risk Score: 92/100 — This event titled 'Movie' lacks a clear description and specific details about the film being shown. It is hosted by an unidentified entity, raising concerns about its legitimacy. Suspicious text detected in image: \"Nine months complete\". Consider gathering more detailed information about the event and the host before proceeding with registration."
+  },
+  {
+    "_id": "6a0dd2d3d15325e773b4abf6",
+    "title": "Meeting",
+    "description": "Haisi",
+    "emoji": "💼",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [
+      {
+        "clerkId": "user_3C720QcslCGzJe2yx59XgiX52Tt",
+        "name": "Soumya",
+        "email": "kirtanmahale20@gmail.com",
+        "phone": "",
+        "message": "",
+        "imageUrl": "https://img.clerk.com/eyJ0eXBlIjoiZGVmYXVsdCIsImlpZCI6Imluc18zQUhpWEl0R0h2ODV0MzkxM3FqaFJVa1d5eTIiLCJyaWQiOiJ1c2VyXzNDNzIwUWNzbENHekplMnl4NTlYZ2lYNTJUdCJ9",
+        "joinedAt": "2026-05-20T18:06:59.467Z",
+        "checkInOtp": "986972",
+        "checkedIn": false,
+        "checkedInAt": null
+      }
+    ],
+    "pendingRequests": [],
+    "date": "2026-05-21",
+    "time": "00:00",
+    "endDate": "2026-05-21",
+    "endTime": "01:10",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 22.7202778,
+      "lng": 75.8669444,
+      "formattedAddress": "51, Mahatma Gandhi Rd, Shastri Market, Indore GPO, Indore, Madhya Pradesh 452007, India",
+      "placeId": "ChIJCzGuRhL9YjkRB0S7W2FE9Ss",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "452007",
+      "neighborhood": "Indore GPO",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.8669444,
+          22.7202778
+        ]
+      }
+    },
+    "createdAt": "2026-05-20T15:27:15.366Z",
+    "updatedAt": "2026-05-23T08:40:30.978Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRJr9TBiUDTBxGSs3fuNHj4Zk2ynO5Ibavgp7d",
+    "startsAt": "2026-05-20T18:30:00.000Z",
+    "endsAt": "2026-05-20T19:40:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 60,
+      "riskLevel": "high",
+      "semanticIntegrity": 50,
+      "hostLegitimacy": 70,
+      "engagementPattern": 40,
+      "flags": [
+        {
+          "type": "Vague Description",
+          "description": "The event description 'Haisi' is unclear and lacks detail about the meeting's purpose.",
+          "severity": "medium"
+        }
+      ],
+      "summary": "The event titled 'Meeting' has a vague description and lacks sufficient details, which raises some concerns. While it is hosted by a local entity and is free of charge, the ambiguity could deter potential attendees. The uploaded image does not match the event — Image of nature does not match meeting title/category.",
+      "recommendation": "Provide a more detailed description of the meeting's agenda and objectives to enhance clarity.",
+      "scannedAt": "2026-05-23T08:40:30.933Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRJr9TBiUDTBxGSs3fuNHj4Zk2ynO5Ibavgp7d",
+        "checked": true,
+        "imageRiskScore": 21,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "Image of nature does not match meeting title/category.",
+        "appropriatenessNote": "clean",
+        "placeholderNote": "Appears to be a generic nature stock photo.",
+        "suspiciousText": "none",
+        "dominantContent": "Mountain landscape with trees and clouds",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 60,
+        "imageRiskScore": 21,
+        "combinedNote": "Text: 60 × 75% + Image: 21 × 25% = 60"
+      }
+    },
+    "admin_status": "approved",
+    "botDecision": {
+      "action": "approved_with_warnings",
+      "score": 60,
+      "at": "2026-05-23T08:40:30.978Z"
+    },
+    "internalFlag": "needs_improvement",
+    "isActive": true,
+    "isApproved": true,
+    "isListed": true,
+    "moderationStatus": "approved"
+  },
+  {
+    "_id": "6a0dac6da902eadd8765c4bd",
+    "title": "Basketball",
+    "description": "Basketball",
+    "emoji": "🏀",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-21",
+    "time": "12:00",
+    "endDate": "2026-05-21",
+    "endTime": "18:00",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 22.7280036,
+      "lng": 75.804099,
+      "formattedAddress": "Indore, Madhya Pradesh 452005, India",
+      "placeId": "ChIJh6bRRS3_YjkRLRx0itemDz0",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "452005",
+      "neighborhood": "",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.804099,
+          22.7280036
+        ]
+      }
+    },
+    "createdAt": "2026-05-20T12:43:25.926Z",
+    "updatedAt": "2026-05-23T08:14:22.786Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRqUPApT1yAw1DHJtS68jzPU47kN5adgFpesZM",
+    "startsAt": "2026-05-21T06:30:00.000Z",
+    "endsAt": "2026-05-21T12:30:00.000Z",
+    "leaveLog": [
+      {
+        "clerkUserId": "user_3C720QcslCGzJe2yx59XgiX52Tt",
+        "reason": "User cancelled / left",
+        "leftAt": "2026-05-21T12:17:51.676Z"
+      }
+    ],
+    "aiAnalysis": {
+      "riskScore": 38,
+      "riskLevel": "medium",
+      "semanticIntegrity": 85,
+      "hostLegitimacy": 80,
+      "engagementPattern": 70,
+      "flags": [
+        {
+          "type": "[Image] irrelevant content",
+          "description": "Image does not relate to basketball.",
+          "severity": "high",
+          "source": "image"
+        }
+      ],
+      "summary": "The event titled 'Basketball' is hosted locally in Indore and is free to attend. While the description is minimal, the known location and lack of suspicious elements contribute to a low risk assessment. The uploaded image does not match the event — The image depicts game controllers, which are unrelated to basketball.",
+      "recommendation": "Encourage the host to provide more details about the event format and schedule to enhance clarity.",
+      "scannedAt": "2026-05-23T08:14:21.551Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRqUPApT1yAw1DHJtS68jzPU47kN5adgFpesZM",
+        "checked": true,
+        "imageRiskScore": 61,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "The image depicts game controllers, which are unrelated to basketball.",
+        "appropriatenessNote": "clean",
+        "placeholderNote": "The image is a generic photo of game controllers.",
+        "suspiciousText": "none",
+        "dominantContent": "two game controllers with colored lights",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 30,
+        "imageRiskScore": 61,
+        "combinedNote": "Text: 30 × 75% + Image: 61 × 25% = 38"
+      }
+    },
+    "admin_status": "approved",
+    "botDecision": {
+      "action": "approved_with_warnings",
+      "score": 38,
+      "at": "2026-05-23T08:14:22.786Z"
+    },
+    "internalFlag": "needs_improvement",
+    "isActive": true,
+    "isApproved": true,
+    "isListed": true,
+    "moderationStatus": "approved"
+  },
+  {
+    "_id": "6a0d1f035182f1a3a89cbdde",
+    "title": "Travel",
+    "description": "Travel",
+    "emoji": "🪩",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "paid",
+    "priceCents": 19900,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-20",
+    "time": "12:00",
+    "endDate": "2026-05-20",
+    "endTime": "15:00",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "ended",
+    "location": {
+      "lat": 22.7195687,
+      "lng": 75.8577258,
+      "formattedAddress": "Indore, Madhya Pradesh, India",
+      "placeId": "ChIJ2w1BG638YjkR9EBiNdrEbgk",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "",
+      "neighborhood": "",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.8577258,
+          22.7195687
+        ]
+      }
+    },
+    "createdAt": "2026-05-20T02:40:03.241Z",
+    "updatedAt": "2026-05-20T12:42:19.812Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRrGg66BYL2lxFcfGM0WoY8Vh3QAdw6RtbOTXs",
+    "startsAt": "2026-05-20T06:30:00.000Z",
+    "endsAt": "2026-05-20T09:30:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 70,
+      "riskLevel": "high",
+      "semanticIntegrity": 25,
+      "hostLegitimacy": 30,
+      "engagementPattern": 20,
+      "flags": [
+        {
+          "type": "Vague Description",
+          "description": "The event title and description are too vague and provide no specific details about the nature of the travel.",
+          "severity": "high"
+        },
+        {
+          "type": "Suspicious Host",
+          "description": "The host is listed as 'Local Host' without any identifiable or reputable information.",
+          "severity": "high"
+        }
+      ],
+      "summary": "The event titled 'Travel' lacks a clear description and essential details, raising concerns about its legitimacy. The vague nature of the listing and the anonymous host contribute to a high risk of fraud.",
+      "recommendation": "Request more detailed information about the event and verify the host's identity before proceeding.",
+      "scannedAt": "2026-05-20T07:04:32.215Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRrGg66BYL2lxFcfGM0WoY8Vh3QAdw6RtbOTXs",
+        "checked": true,
+        "imageRiskScore": 25,
+        "isRelevant": true,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "The image depicts a natural landscape suitable for a travel event.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "Appears to be a generic stock photo of mountains and trees.",
+        "suspiciousText": "none",
+        "dominantContent": "Mountain landscape with trees and clouds",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 85,
+        "imageRiskScore": 25,
+        "combinedNote": "Text: 85 × 75% + Image: 25 × 25% = 70"
+      }
+    },
+    "admin_status": "rejected",
+    "botDecision": {
+      "action": "rejected",
+      "score": 70,
+      "at": "2026-05-20T07:04:32.251Z"
+    },
+    "isActive": false,
+    "isApproved": false,
+    "isListed": false,
+    "moderationStatus": "rejected",
+    "moderatorNote": "AI Risk Score: 70/100 — The event titled 'Travel' lacks a clear description and essential details, raising concerns about its legitimacy. The vague nature of the listing and the anonymous host contribute to a high risk of fraud. Request more detailed information about the event and verify the host's identity before proceeding.",
+    "endedAt": "2026-05-20T12:42:19.812Z"
+  },
+  {
+    "_id": "6a0d1b9f5182f1a3a89cbddd",
+    "title": "Travel",
+    "description": "Travel",
+    "emoji": "🪩",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "paid",
+    "priceCents": 29900,
+    "joinPolicy": "open",
+    "attendance": null,
+    "capacity": null,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-20",
+    "time": "12:00",
+    "endDate": "2026-05-20",
+    "endTime": "03:00",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "ended",
+    "location": {
+      "lat": 22.757474,
+      "lng": 75.7725656,
+      "formattedAddress": "Gandhi Nagar, Indore, Budhaniya, Madhya Pradesh 453112, India",
+      "placeId": "ChIJt3kBG8YBYzkRzUeMqCvfFDQ",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "453112",
+      "neighborhood": "Gandhi Nagar",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.7725656,
+          22.757474
+        ]
+      }
+    },
+    "createdAt": "2026-05-20T02:25:35.245Z",
+    "updatedAt": "2026-05-20T07:04:22.905Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxR4eB8pmCO92Agj1XFNGLnTlyW36csqt705CEd",
+    "startsAt": "2026-05-20T06:30:00.000Z",
+    "endsAt": "2026-05-19T21:30:00.000Z",
+    "endedAt": "2026-05-20T02:25:35.590Z",
+    "aiAnalysis": {
+      "riskScore": 69,
+      "riskLevel": "high",
+      "semanticIntegrity": 20,
+      "hostLegitimacy": 30,
+      "engagementPattern": 10,
+      "flags": [
+        {
+          "type": "Vague Details",
+          "description": "The event description is overly simplistic and lacks essential details about the travel experience.",
+          "severity": "high"
+        },
+        {
+          "type": "Suspicious Payment",
+          "description": "The price is low for a travel-related event, which may indicate hidden costs or unrealistic claims.",
+          "severity": "high"
+        }
+      ],
+      "summary": "The event titled 'Travel' hosted by a 'Local Host' raises significant red flags due to its vague description and suspiciously low price. Further details about the itinerary and host credibility are missing.",
+      "recommendation": "Request more information from the host before considering attendance.",
+      "scannedAt": "2026-05-20T07:04:22.855Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxR4eB8pmCO92Agj1XFNGLnTlyW36csqt705CEd",
+        "checked": true,
+        "imageRiskScore": 21,
+        "isRelevant": true,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "The image shows a natural landscape, relevant to travel.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "It looks like a generic nature stock photo.",
+        "suspiciousText": "none",
+        "dominantContent": "mountains and trees in natural setting",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 85,
+        "imageRiskScore": 21,
+        "combinedNote": "Text: 85 × 75% + Image: 21 × 25% = 69"
+      }
+    },
+    "admin_status": "approved",
+    "botDecision": {
+      "action": "approved_with_warnings",
+      "score": 69,
+      "at": "2026-05-20T07:04:22.905Z"
+    },
+    "internalFlag": "needs_improvement",
+    "isActive": true,
+    "isApproved": true,
+    "isListed": true,
+    "moderationStatus": "approved"
+  },
+  {
+    "_id": "6a0d1a2a5182f1a3a89cbddc",
+    "title": "Cricket",
+    "description": "Cricket event",
+    "emoji": "🏏",
+    "creatorClerkId": "user_3C6zg9qLTPNOekxlqWRngXJSvJ6",
+    "creatorName": "Local Host",
+    "kind": "free",
+    "priceCents": null,
+    "joinPolicy": "approval",
+    "attendance": 20,
+    "capacity": 20,
+    "attendees": [],
+    "pendingRequests": [],
+    "date": "2026-05-21",
+    "time": "12:00",
+    "endDate": "2026-05-21",
+    "endTime": "18:00",
+    "timezone": "Asia/Kolkata",
+    "tags": [],
+    "visibility": "public",
+    "status": "active",
+    "location": {
+      "lat": 22.7242543,
+      "lng": 75.87965679999999,
+      "formattedAddress": "IDA Building, Race Course Rd, Near Janjeerwala Square, New Palasia, Indore, Madhya Pradesh 452003, India",
+      "placeId": "ChIJf8rRdT_9YjkRECxDGzNa4eo",
+      "countryCode": "IN",
+      "countryName": "India",
+      "admin1": "Madhya Pradesh",
+      "admin1Code": "MP",
+      "city": "Indore",
+      "cityKey": "indore",
+      "postalCode": "452003",
+      "neighborhood": "New Palasia",
+      "source": "places_autocomplete",
+      "geo": {
+        "type": "Point",
+        "coordinates": [
+          75.87965679999999,
+          22.7242543
+        ]
+      }
+    },
+    "createdAt": "2026-05-20T02:19:22.067Z",
+    "updatedAt": "2026-05-20T07:04:15.149Z",
+    "bannerUri": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRVH5XQSpAimRHKEFoxsCrMhUcbe3fOWkanZIL",
+    "startsAt": "2026-05-21T06:30:00.000Z",
+    "endsAt": "2026-05-21T12:30:00.000Z",
+    "aiAnalysis": {
+      "riskScore": 23,
+      "riskLevel": "low",
+      "semanticIntegrity": 85,
+      "hostLegitimacy": 90,
+      "engagementPattern": 80,
+      "flags": [
+        {
+          "type": "[Image] irrelevant_content",
+          "description": "Image content does not match cricket event.",
+          "severity": "medium",
+          "source": "image"
+        }
+      ],
+      "summary": "The event is a free cricket gathering at a known venue in Indore. It has a clear description and reasonable capacity, indicating a legitimate community gathering. The uploaded image does not match the event — Image shows video game controllers, unrelated to cricket.",
+      "recommendation": "Promote the event to increase attendance and ensure community engagement.",
+      "scannedAt": "2026-05-20T07:04:15.115Z",
+      "imageAnalysis": {
+        "imageUrl": "https://vex87lpsc4.ufs.sh/f/3hB7WvsizuxRVH5XQSpAimRHKEFoxsCrMhUcbe3fOWkanZIL",
+        "checked": true,
+        "imageRiskScore": 61,
+        "isRelevant": false,
+        "isAppropriate": true,
+        "isPlaceholder": true,
+        "relevanceNote": "Image shows video game controllers, unrelated to cricket.",
+        "appropriatenessNote": "Clean",
+        "placeholderNote": "Generic stock photo of video game controllers.",
+        "suspiciousText": "none",
+        "dominantContent": "Two video game controllers in blue light",
+        "reason": null
+      },
+      "scoreBreakdown": {
+        "textRiskScore": 10,
+        "imageRiskScore": 61,
+        "combinedNote": "Text: 10 × 75% + Image: 61 × 25% = 23"
+      }
+    },
+    "admin_status": "approved",
+    "botDecision": {
+      "action": "approved",
+      "score": 23,
+      "at": "2026-05-20T07:04:15.149Z"
+    },
+    "isActive": true,
+    "isApproved": true,
+    "isListed": true,
+    "moderationStatus": "approved"
+  }
+]

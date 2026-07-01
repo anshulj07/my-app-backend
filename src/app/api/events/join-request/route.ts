@@ -28,7 +28,8 @@ export async function POST(req: Request) {
 
     const client = await clientPromise;
     const db = client.db("assis_auth");
-    const ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
+    let ev = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
+    let parentCol = "events";
 
     if (!ev) return NextResponse.json({ error: "Event not found" }, { status: 404 });
     if ((ev as any).joinPolicy !== "approval")
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
       finalImageUrl = userDoc?.profile?.avatar?.url || "";
     }
 
-    await db.collection("events").updateOne(
+    await db.collection(parentCol).updateOne(
       { _id: new ObjectId(eventId) },
       {
         $push: {

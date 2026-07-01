@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import crypto from "crypto";
+import { sendPushNotification } from "../../../../lib/push";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
@@ -65,7 +66,11 @@ export async function POST(req: Request) {
     // We check the event's join policy. If it's 'approval', we don't 'confirm' (admit)
     // the user yet, even though they paid. They stay in a 'paid_pending_approval' state.
     
-    const ev = await db.collection("events").findOne({ _id: new ObjectId(booking.eventId) });
+    let ev = await db.collection("events").findOne({ _id: new ObjectId(booking.eventId) });
+    let parentCol = "events";
+
+
+
     const joinPolicy = ev?.joinPolicy || "open";
     const statusAfterPayment = joinPolicy === "approval" ? "paid_pending_approval" : "confirmed";
 
@@ -113,7 +118,7 @@ export async function POST(req: Request) {
          * The user has paid, but the host still needs to admit them.
          * We update the existing pending request to mark it as 'paid'.
          */
-        await db.collection("events").updateOne(
+        await db.collection(parentCol).updateOne(
           { _id: new ObjectId(eventId), "pendingRequests.clerkUserId": booking.bookerId },
           { 
             $set: { 
@@ -124,6 +129,20 @@ export async function POST(req: Request) {
           } as any
         );
         console.log(`[VerifyPayment] Booking ${bookingId} is now PAID but PENDING host approval.`);
+        
+        if (booking.hostId && booking.hostId !== booking.bookerId) {
+           const userDoc = await db.collection("users").findOne({ clerkUserId: booking.bookerId });
+           const realName = userDoc?.profile?.firstName 
+             ? `${userDoc.profile.firstName} ${userDoc.profile.lastName || ""}`.trim() 
+             : (booking.booker?.name || "Guest").trim();
+
+           await sendPushNotification(
+             booking.hostId,
+             "Paid Request to Join 💰✋",
+             `${realName} has paid and requested to join your event '${ev?.title || "Event"}'. Open the app to review.`,
+             { eventId, type: "pending", paid: true }
+           );
+        }
       } else {
         /**
          * ── CASE B: OPEN JOIN ──
@@ -154,7 +173,7 @@ export async function POST(req: Request) {
           isPaid:            true, // Clearly it's paid
         };
 
-        await db.collection("events").updateOne(
+        await db.collection(parentCol).updateOne(
           { _id: new ObjectId(eventId) },
           {
             $pull: { pendingRequests: { clerkUserId: booking.bookerId } } as any,
@@ -162,6 +181,15 @@ export async function POST(req: Request) {
             $set: { updatedAt: new Date() },
           }
         );
+
+        if (booking.hostId && booking.hostId !== booking.bookerId) {
+           await sendPushNotification(
+             booking.hostId,
+             "New Paid Attendee! 💰🎉",
+             `${realName} just paid and joined your event '${ev?.title || "Event"}'.`,
+             { eventId, type: "joined", paid: true }
+           );
+        }
       }
 
       // Track statistics for host (Earning should be counted even if pending approval?)

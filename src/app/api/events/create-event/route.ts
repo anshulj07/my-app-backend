@@ -52,8 +52,8 @@
 //       kind,                         // ✅ normalized: "free" | "paid" | "service"
 //       priceCents: kind === "free" ? null : (payload.priceCents ?? null),
 
-//       // ✅ joinPolicy — "open" (direct join) or "approval" (host must approve)
-//       joinPolicy: (payload as any).joinPolicy ?? "open",
+//       // ✅ joinPolicy — "approval" for all services, or payload fallback for events
+//       joinPolicy: kind === "service" ? "approval" : ((payload as any).joinPolicy ?? "open"),
 
 //       // ✅ attendance/capacity limit — frontend may send as "capacity" or "attendance"
 //       attendance: (payload as any).capacity ?? payload.attendance ?? null,
@@ -230,6 +230,17 @@ function requireApiKey(req: Request) {
     : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export async function POST(req: Request) {
   const auth = requireApiKey(req);
   if (auth) return auth;
@@ -277,6 +288,11 @@ export async function POST(req: Request) {
       creatorName:    body.creatorName || "Local Host",
       kind:           data.kind ?? "free",
       priceCents:     data.priceCents ?? null,
+      isRecurring:    data.isRecurring ?? false,
+      recurringDays:  data.recurringDays ?? [],
+      recurringSchedule: data.recurringSchedule ?? [],
+      bookingWindowDays: data.bookingWindowDays ?? 1,
+      dailyCapacity:  data.dailyCapacity ?? null,
       joinPolicy:     data.joinPolicy ?? "open",
       attendance:     effectiveCapacity,
       capacity:       effectiveCapacity,
@@ -289,7 +305,7 @@ export async function POST(req: Request) {
       timezone:       data.timezone ?? "",
       tags:           data.tags ?? [],
       visibility:     data.visibility ?? "public",
-      status:         "active",
+      status:         "waiting",
       location: {
         ...data.location,
         // GeoJSON for $near queries — requires 2dsphere index
@@ -310,13 +326,36 @@ export async function POST(req: Request) {
     if (startsAt) doc.startsAt = startsAt;
     if (endsAt)   doc.endsAt   = endsAt;
 
-    // ── Insert document into correct collection ─────────────────────────────
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Split collection logic: 'services' for kind service, else 'events'
-    const targetCollection = doc.kind === "service" ? "services" : "events";
-    const result = await db.collection(targetCollection).insertOne(doc);
+    // ✅ Check verification and travel practicality
+    const userDoc = await db.collection("users").findOne({ clerkUserId: creatorClerkId });
+    const isVerified = !!userDoc?.verification?.idVerified;
+
+    const userCurrentLocation = body.userCurrentLocation;
+    if (!userCurrentLocation || !Number.isFinite(userCurrentLocation.lat)) {
+      return NextResponse.json(
+        { error: "Your current location is required to create an event. Please enable location permissions." },
+        { status: 400 }
+      );
+    }
+
+    const distanceKm = getDistanceKm(
+      userCurrentLocation.lat, userCurrentLocation.lng,
+      data.location.lat, data.location.lng
+    );
+
+    // Rule 1: Unverified users limited to 100km
+    if (!isVerified && distanceKm > 100) {
+      return NextResponse.json(
+        { error: `Unverified users can only create events within 100 km of their current location. (Distance: ${distanceKm.toFixed(1)} km). Please complete your identity verification to create events anywhere.` },
+        { status: 403 }
+      );
+    }
+
+
+    const result = await db.collection("events").insertOne(doc);
     const eventId = result.insertedId.toString();
 
     // ── Update user_stats: increment eventsHosted ─────────────────────────────
@@ -340,6 +379,7 @@ export async function POST(req: Request) {
         ok: true,
         eventId,
         event: { ...doc, _id: eventId },
+        distanceKm,
       },
       { status: 201 }
     );

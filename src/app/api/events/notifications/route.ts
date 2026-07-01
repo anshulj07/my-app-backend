@@ -24,22 +24,21 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Fetch from both 'events' and 'services'
-    const [evDocs, svDocs] = await Promise.all([
+    // ✅ Fetch from 'events' and 'notifications' (bot alerts)
+    const [evDocs, botNotifs] = await Promise.all([
       db.collection("events").find(
         { creatorClerkId: clerkUserId, status: { $nin: ["deleted"] } },
         { projection: { title: 1, emoji: 1, attendees: 1, pendingRequests: 1, joinPolicy: 1 } }
       ).toArray(),
-      db.collection("services").find(
-        { creatorClerkId: clerkUserId, status: { $nin: ["deleted"] } },
-        { projection: { title: 1, emoji: 1, attendees: 1, pendingRequests: 1, joinPolicy: 1 } }
+      db.collection("notifications").find(
+        { recipientClerkId: clerkUserId }
       ).toArray()
     ]);
-    const events = [...evDocs, ...svDocs];
+    const events = [...evDocs];
 
     type NotifItem = {
       id: string;
-      type: "joined" | "pending";
+      type: "joined" | "pending" | "bot_alert";
       eventId: string;
       eventTitle: string;
       eventEmoji: string;
@@ -49,6 +48,8 @@ export async function GET(req: Request) {
       message: string;
       timestamp: string;
       paid?: boolean; // ✅ Added to track payment status
+      flags?: any[];
+      moderatorNote?: string;
     };
 
     const items: NotifItem[] = [];
@@ -114,6 +115,28 @@ export async function GET(req: Request) {
           message: String(p.message || ""),
           timestamp,
           paid: !!p.paid,
+        });
+      }
+    }
+
+    // Bot notifications
+    for (const n of botNotifs) {
+      if (n.type === "event_rejected" || n.type === "service_rejected" || n.type === "event_approved" || n.type === "service_approved") {
+        const isApproved = n.type.includes("approved");
+        items.push({
+          id: n._id.toString(),
+          type: "bot_alert",
+          eventId: n.eventId || n.serviceId || "",
+          eventTitle: n.eventTitle || "Your Listing",
+          eventEmoji: isApproved ? "✅" : "⚠️",
+          userName: "AI Moderator",
+          userClerkId: "bot",
+          userImageUrl: "",
+          message: n.message || (isApproved ? "Your listing was approved." : "Your listing was rejected."),
+          timestamp: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+          flags: n.flags || [],
+          moderatorNote: n.moderatorNote || "",
+          isApproved,
         });
       }
     }

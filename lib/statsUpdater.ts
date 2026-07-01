@@ -66,12 +66,7 @@ export async function updateHostStats(clerkUserId: string) {
     }
   }
 
-  // 5. Services
-  const serviceEvents = await db.collection("events").find(
-    { creatorClerkId: clerkUserId, kind: "service", status: { $ne: "deleted" } },
-    { projection: { title: 1, emoji: 1 } }
-  ).limit(10).toArray();
-  const services = serviceEvents.map((e: any) => `${e.emoji || ""} ${e.title || ""}`.trim());
+  // 5. Services removed
 
   // 6. Rating
   const reviewsAgg = await db.collection("reviews").aggregate([
@@ -90,7 +85,7 @@ export async function updateHostStats(clerkUserId: string) {
     newAttendees,
     thisMonthEarning,
     overallEarning,
-    services,
+    services: [], // Legacy field, kept empty for schema compatibility if needed
     rating,
     reviewsCount,
     updatedAt: new Date(),

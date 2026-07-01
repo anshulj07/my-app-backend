@@ -105,6 +105,8 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 
+export const dynamic = "force-dynamic";
+
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
   if (!expected) return null;
@@ -129,7 +131,7 @@ export async function GET(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ─── 1. Fetch events CREATED by this user ──────────────────────────────
+    // ─── 1. Fetch events CREATED by this user ─────────────────
     const createdEventsRaw = await db
       .collection("events")
       .find({ creatorClerkId: clerkUserId })
@@ -137,7 +139,15 @@ export async function GET(req: Request) {
       .limit(500)
       .toArray();
 
-    const createdEvents = createdEventsRaw.map((e: any) => ({
+    const allCreatedRaw = [...createdEventsRaw]
+      .sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 500);
+
+    const createdEvents = allCreatedRaw.map((e: any) => ({
       ...e,
       _id: e._id.toString(),
     }));

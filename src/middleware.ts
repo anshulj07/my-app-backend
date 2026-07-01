@@ -37,6 +37,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/users/(.*)", // ✅ NEW - expose users routes
   "/api/reviews/(.*)", // ✅ NEW - expose reviews routes
   "/api/bookings/(.*)", // ✅ NEW - expose bookings routes
+  "/api/ping",          // ✅ Keep-alive endpoint (no auth needed)
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {

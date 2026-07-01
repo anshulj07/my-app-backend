@@ -42,7 +42,8 @@ export const EventCreateSchema = z
     creatorClerkId: z.string().optional().default(""),
     clerkUserId: z.string().optional().default(""),
 
-    kind: z.enum(["free", "paid", "service"]).optional().default("free"),
+    kind: z.enum(["free", "paid"]).optional().default("free"),
+    isRecurring: z.boolean().optional().default(false),
     priceCents: z.number().int().nullable().optional().default(null),
 
     // ✅ Who can join: open = direct join, approval = host must approve
@@ -57,6 +58,20 @@ export const EventCreateSchema = z
     // ✅ for create-event, default empty; do NOT allow client to set it
     // We'll force it to [] in route anyway.
     attendees: z.array(z.string().min(1)).optional().default([]),
+
+    // ✅ which days of the week the recurring event happens on (0=Sun, 1=Mon... 6=Sat)
+    recurringDays: z.array(z.number().int().min(0).max(6)).optional().default([]),
+
+    // ✅ Detailed recurring schedule (day-specific times)
+    recurringSchedule: z.array(z.object({
+      day: z.number().int().min(0).max(6),
+      startTime: z.string().regex(/^\d{2}:\d{2}$/),
+      endTime: z.string().regex(/^\d{2}:\d{2}$/),
+    })).optional().default([]),
+
+    // ✅ Recurring specifics
+    bookingWindowDays: z.number().int().min(0).optional().default(1),
+    dailyCapacity: z.number().int().positive().nullable().optional().default(null),
 
     // Preferred: ISO datetime
     startsAt: z.string().datetime().optional(),
@@ -85,22 +100,22 @@ export const EventCreateSchema = z
     // ✅ Merge capacity into attendance if attendance is not set (frontend sends "capacity")
     const effectiveAttendance = p.attendance ?? p.capacity ?? null;
 
-    // paid/service require price; free requires null
-    if (p.kind === "paid" || p.kind === "service") {
+    // paid requires price; free requires null
+    if (p.kind === "paid") {
       if (p.priceCents == null || p.priceCents <= 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["priceCents"],
-          message: "priceCents must be > 0 for paid/service",
+          message: "priceCents must be > 0 for paid",
         });
       }
 
-      // ✅ attendance must NOT be set for paid/service
+      // ✅ attendance must NOT be set for paid
       if (effectiveAttendance !== null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["attendance"],
-          message: "attendance must be null for paid/service",
+          message: "attendance must be null for paid",
         });
       }
     } else {

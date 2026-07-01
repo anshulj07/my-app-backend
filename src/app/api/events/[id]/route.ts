@@ -11,6 +11,14 @@ const PatchSchema = z.object({
   time: z.string().optional(),
   lat: z.number().finite().optional(),
   lng: z.number().finite().optional(),
+  description: z.string().optional(),
+  bannerUri: z.string().optional(),
+  recurringSchedule: z.array(z.any()).optional(),
+  recurringDays: z.array(z.number()).optional(),
+  bookingWindowDays: z.number().nullable().optional(),
+  dailyCapacity: z.number().nullable().optional(),
+  joinPolicy: z.string().optional(),
+  status: z.string().optional(),
 });
 
 function requireApiKey(req: Request) {
@@ -51,11 +59,8 @@ export async function GET(req: Request, context: Ctx) {
   const client = await clientPromise;
   const db = client.db("assis_auth");
 
-  // ✅ Try finding in 'events' first, then 'services'
+  // ✅ Try finding in 'events'
   let doc = await db.collection("events").findOne({ _id });
-  if (!doc) {
-    doc = await db.collection("services").findOne({ _id });
-  }
 
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
           { fromClerkUserId: clerkUserId },
           { toClerkUserId:   clerkUserId },
         ],
+        deletedFor: { $ne: clerkUserId }
       })
       .sort({ createdAt: -1 })
       .toArray();

@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import Razorpay from "razorpay";
+import { sendPushNotification } from "../../../../lib/push";
 
 function requireApiKey(req: Request) {
   const expected = process.env.EVENT_API_KEY;
@@ -89,11 +90,8 @@ export async function POST(req: Request) {
       }
       const _id = new ObjectId(eventId);
       
-      // ✅ Try 'events' collection first, then 'services'
+      // ✅ Try 'events' collection
       eventDoc = await db.collection("events").findOne({ _id });
-      if (!eventDoc) {
-        eventDoc = await db.collection("services").findOne({ _id });
-      }
 
       if (!eventDoc) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
@@ -126,12 +124,11 @@ export async function POST(req: Request) {
         );
       }
 
-      // 2. Check both collections for attendees list (safety check)
+      // 2. Check events collection for attendees list (safety check)
       const attendeeQuery = { _id: new ObjectId(eventId), "attendees.clerkId": bookerId };
       const inEvents = await db.collection("events").findOne(attendeeQuery);
-      const inServices = await db.collection("services").findOne(attendeeQuery);
 
-      if (inEvents || inServices) {
+      if (inEvents) {
         return NextResponse.json(
           { error: "You are already an attendee of this event" },
           { status: 409 }
@@ -143,16 +140,16 @@ export async function POST(req: Request) {
     // Events allow multiple attendees — skip conflict check for event type
     // ── Check host availability ─────────────────────────────────────────────
     if (type === "service" && eventId && startTime) {
-       // Granular check for services
+       // Allow overriding if the conflicting booking is just a stale payment_pending or belongs to the same user
+       const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
        const requestedStart = parseInt(startTime.split(":")[0]);
        const requestedEnd = requestedStart + (duration || 1);
 
-       const conflicting = await db.collection("bookings").findOne({
+       const conflicting = await db.collection("bookings").find({
          eventId,
          status: { $in: ["confirmed", "pending", "payment_pending"] },
          startDate, // same day
          $or: [
-           // Overlap logic: (StartA < EndB) && (EndA > StartB)
            {
              $expr: {
                $and: [
@@ -162,11 +159,32 @@ export async function POST(req: Request) {
              }
            }
          ]
-       } as any);
+       }).toArray();
 
-       if (conflicting) {
-         return NextResponse.json({ error: "This time slot is already booked." }, { status: 409 });
+       // Check if any conflicting booking is truly blocking
+       const trulyBlocking = conflicting.find(b => {
+         if (b.status === "confirmed" || b.status === "pending") return true;
+         // If payment_pending:
+         if (b.status === "payment_pending") {
+           // If it's another user, hold it for 10 minutes max
+           if (b.bookerId !== bookerId && b.createdAt > tenMinsAgo) return true;
+           // If it's the SAME user, it means they abandoned the previous payment attempt, so don't block them from trying again!
+           return false; 
+         }
+         return false;
+       });
+
+       if (trulyBlocking) {
+         return NextResponse.json({ error: "This time slot is already booked or someone is currently paying for it." }, { status: 409 });
        }
+       
+       // Clean up the user's own abandoned payment_pending bookings for this slot to avoid clutter
+       await db.collection("bookings").deleteMany({
+         bookerId,
+         eventId,
+         status: "payment_pending",
+         startDate
+       });
     } else if (type === "person") {
       // Whole day check for person bookings
       const conflicting = await db.collection("bookings").findOne({
@@ -245,7 +263,7 @@ export async function POST(req: Request) {
 
     // ── Sync with correct collection (so it shows in 'Going' tab as pending) ──
     if (type === "event" && eventId) {
-      const parentCol = eventDoc.kind === "service" ? "services" : "events";
+      const parentCol = "events";
       
       // ✅ Prevent duplicate entries for the same user in pendingRequests
       await db.collection(parentCol).updateOne(
@@ -278,8 +296,26 @@ export async function POST(req: Request) {
       const otp = String(Math.floor(100000 + Math.random() * 900000));
       await db.collection("bookings").updateOne(
         { _id: result.insertedId },
-        { $set: { checkInOtp: otp, status: "confirmed" } }
+        { $set: { checkInOtp: otp, status: initialStatus } }
       );
+
+      if (type === "event" && hostId && hostId !== bookerId) {
+        if (joinPolicy === "approval") {
+          await sendPushNotification(
+             hostId,
+             "New Request to Join ✋",
+             `${realBookerName} has requested to join your event '${eventDoc?.title || "Event"}'. Open the app to review.`,
+             { eventId, type: "pending" }
+          );
+        } else {
+          await sendPushNotification(
+             hostId,
+             "New Attendee! 🎉",
+             `${realBookerName} just joined your event '${eventDoc?.title || "Event"}'.`,
+             { eventId, type: "joined" }
+          );
+        }
+      }
 
       return NextResponse.json({
         ok: true,

@@ -122,15 +122,10 @@ async function handleDelete(req: Request) {
     const client = await clientPromise;
     const db = client.db("assis_auth");
 
-    // ✅ Multi-collection search
+    // ✅ Multi-collection search removed
     const oid = new ObjectId(finalEventId);
-    let col = db.collection("events");
-    let ev = await col.findOne({ _id: oid });
-
-    if (!ev) {
-      col = db.collection("services");
-      ev = await col.findOne({ _id: oid });
-    }
+    const col = db.collection("events");
+    const ev = await col.findOne({ _id: oid });
 
     if (!ev) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
